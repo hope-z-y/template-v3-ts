@@ -41,9 +41,7 @@ export default defineComponent({
           </header>
 
           {/* 内容 */}
-          <main class="size-full rounded-md overflow-clip">
-            {slots.default?.()}
-          </main>
+          <main class="size-full rounded-md overflow-clip">{slots.default?.()}</main>
         </div>
       </div>
     );

@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
-@theme {}
+@theme {
+}
 
 @layer base {
-	.bg {
-		@apply bg-white dark:bg-[#202020];
-	}
+  .bg {
+    @apply bg-white dark:bg-[#202020];
+  }
 }
-
 
 /* 根据自己选择器修改 */
-[data-bs-theme='dark']::view-transition-old(root) {
-	z-index: 2147483646;
+[data-bs-theme="dark"]::view-transition-old(root) {
+  z-index: 2147483646;
 }
 
-[data-bs-theme='dark']::view-transition-new(root) {
-	z-index: 1;
+[data-bs-theme="dark"]::view-transition-new(root) {
+  z-index: 1;
 }
 
 /* 添加自定义 dark variant */

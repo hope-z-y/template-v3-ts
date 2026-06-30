@@ -1,6 +1,13 @@
 <template>
-    <NMenu :options="menus" :value="activeKey" :collapse="collapse" :collapse-transition="false"
-        :render-label="renderMenuLabel" :render-icon="renderMenuIcon" @update:value="handleMenuUpdate" />
+  <NMenu
+    :options="menus"
+    :value="activeKey"
+    :collapse="collapse"
+    :collapse-transition="false"
+    :render-label="renderMenuLabel"
+    :render-icon="renderMenuIcon"
+    @update:value="handleMenuUpdate"
+  />
 </template>
 
 <script setup lang="ts">
@@ -30,9 +37,9 @@ type RouteMenuOption = MenuOption & { iconName?: string };
  * @returns 规范化后的完整路径，如 `/system-management/user-management`
  */
 const resolveRoutePath = (parentPath: string, routePath: string): string => {
-    if (routePath.startsWith("/")) return routePath;
-    const base = parentPath.replace(/\/$/, "");
-    return base ? `${base}/${routePath}` : `/${routePath}`;
+  if (routePath.startsWith("/")) return routePath;
+  const base = parentPath.replace(/\/$/, "");
+  return base ? `${base}/${routePath}` : `/${routePath}`;
 };
 
 /**
@@ -43,37 +50,34 @@ const resolveRoutePath = (parentPath: string, routePath: string): string => {
  * @param routes 待转换的路由列表
  * @param parentPath 父级完整路径，用于拼接嵌套路由
  */
-const routesToMenuOptions = (
-    routes: RouteRecordRaw[],
-    parentPath = "",
-): RouteMenuOption[] => {
-    return routes
-        .filter((item) => !item.meta?.hidden)
-        .map((item) => {
-            const fullPath = resolveRoutePath(parentPath, item.path);
-            const children = item.children?.length
-                ? routesToMenuOptions(item.children, fullPath)
-                : undefined;
+const routesToMenuOptions = (routes: RouteRecordRaw[], parentPath = ""): RouteMenuOption[] => {
+  return routes
+    .filter((item) => !item.meta?.hidden)
+    .map((item) => {
+      const fullPath = resolveRoutePath(parentPath, item.path);
+      const children = item.children?.length
+        ? routesToMenuOptions(item.children, fullPath)
+        : undefined;
 
-            const option: RouteMenuOption = {
-                label: (item.meta?.title as string) || String(item.name ?? item.path),
-                key: fullPath,
-                iconName: item.meta?.icon as string | undefined,
-            };
+      const option: RouteMenuOption = {
+        label: (item.meta?.title as string) || String(item.name ?? item.path),
+        key: fullPath,
+        iconName: item.meta?.icon as string | undefined,
+      };
 
-            if (children?.length) {
-                option.children = children;
-            }
+      if (children?.length) {
+        option.children = children;
+      }
 
-            return option;
-        });
+      return option;
+    });
 };
 
 /** 侧边栏菜单数据，来源于布局容器（staticRoutes[0]）下的子路由 */
 const menus = computed(() => {
-    const children = staticRoutes[0]?.children;
-    if (!children) return [];
-    return routesToMenuOptions(children);
+  const children = staticRoutes[0]?.children;
+  if (!children) return [];
+  return routesToMenuOptions(children);
 });
 
 /** 当前激活菜单项，与路由 path 保持同步以高亮选中项 */
@@ -85,9 +89,9 @@ const activeKey = computed(() => route.path);
  * @param key 菜单项 key，即完整路由路径
  */
 const handleMenuUpdate = (key: string) => {
-    if (key !== route.path) {
-        router.push(key);
-    }
+  if (key !== route.path) {
+    router.push(key);
+  }
 };
 
 /**
@@ -96,14 +100,10 @@ const handleMenuUpdate = (key: string) => {
  * @param option Naive UI 菜单项配置
  */
 const renderMenuLabel = (option: MenuOption) => {
-    if ("href" in option) {
-        return h(
-            "a",
-            { href: option.href, target: "_blank" },
-            option.label as string,
-        );
-    }
-    return option.label as string;
+  if ("href" in option) {
+    return h("a", { href: option.href, target: "_blank" }, option.label as string);
+  }
+  return option.label as string;
 };
 
 /**
@@ -112,11 +112,8 @@ const renderMenuLabel = (option: MenuOption) => {
  * @param iconName Fluent 图标组件名称，如 `People24Regular`
  */
 const getIconComponent = (iconName?: string) => {
-    if (!iconName) return Album24Regular;
-    return (
-        (FluentIcons as Record<string, typeof Album24Regular>)[iconName] ??
-        Album24Regular
-    );
+  if (!iconName) return Album24Regular;
+  return (FluentIcons as Record<string, typeof Album24Regular>)[iconName] ?? Album24Regular;
 };
 
 /**
@@ -125,8 +122,8 @@ const getIconComponent = (iconName?: string) => {
  * @param option Naive UI 菜单项配置
  */
 const renderMenuIcon = (option: MenuOption) => {
-    const icon = getIconComponent((option as RouteMenuOption).iconName);
-    return h(NIcon, null, { default: () => h(icon) });
+  const icon = getIconComponent((option as RouteMenuOption).iconName);
+  return h(NIcon, null, { default: () => h(icon) });
 };
 </script>
 

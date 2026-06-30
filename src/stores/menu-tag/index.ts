@@ -40,9 +40,7 @@ const isHomeTag = (path: string) => path === HOME_PATH;
  * @param list 待规范化的标签列表
  */
 const normalizeTags = (list: MenuTagItem[]): MenuTagItem[] => {
-  const withHome = list.some((item) => isHomeTag(item.path))
-    ? list
-    : [{ ...HOME_TAG }, ...list];
+  const withHome = list.some((item) => isHomeTag(item.path)) ? list : [{ ...HOME_TAG }, ...list];
 
   const rest = withHome.filter((item) => !isHomeTag(item.path));
   const affixed = rest.filter((item) => item.affixed);
@@ -196,9 +194,7 @@ export const useMenuTagStore = defineStore(
      * 关闭所有非固定、非首页标签，仅保留首页与 affixed 标签。
      */
     const closeAll = () => {
-      const keptTags = tags.value.filter(
-        (item) => isHomeTag(item.path) || item.affixed,
-      );
+      const keptTags = tags.value.filter((item) => isHomeTag(item.path) || item.affixed);
       const removedPaths = new Set(
         tags.value
           .filter((item) => !isHomeTag(item.path) && !item.affixed)

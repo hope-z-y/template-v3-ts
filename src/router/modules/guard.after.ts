@@ -1,8 +1,5 @@
 import { useMenuTagStore } from "@/stores/menu-tag";
-import type {
-  NavigationFailure,
-  RouteLocationNormalizedLoaded,
-} from "vue-router";
+import type { NavigationFailure, RouteLocationNormalizedLoaded } from "vue-router";
 
 /**
  * 后置守卫

@@ -1,8 +1,4 @@
-import type {
-  RouteLocation,
-  RouteLocationNormalizedLoaded,
-  RouteRecordRaw,
-} from "vue-router";
+import type { RouteLocation, RouteLocationNormalizedLoaded, RouteRecordRaw } from "vue-router";
 
 export const staticRoutes: RouteRecordRaw[] = [
   {
@@ -28,29 +24,25 @@ export const staticRoutes: RouteRecordRaw[] = [
           {
             path: "user-management",
             name: "UserManagement",
-            component: () =>
-              import("@/views/system-managment/user-management/index.vue"),
+            component: () => import("@/views/system-managment/user-management/index.vue"),
             meta: { title: "用户管理", icon: "People24Regular" },
           },
           {
             path: "role-management",
             name: "RoleManagement",
-            component: () =>
-              import("@/views/system-managment/role-management/index.vue"),
+            component: () => import("@/views/system-managment/role-management/index.vue"),
             meta: { title: "角色管理", icon: "Shield24Regular" },
           },
           {
             path: "menu-management",
             name: "MenuManagement",
-            component: () =>
-              import("@/views/system-managment/menu-management/index.vue"),
+            component: () => import("@/views/system-managment/menu-management/index.vue"),
             meta: { title: "菜单管理", icon: "TextBulletListSquare24Regular" },
           },
           {
             path: "dept-management",
             name: "DeptManagement",
-            component: () =>
-              import("@/views/system-managment/dept-management/index.vue"),
+            component: () => import("@/views/system-managment/dept-management/index.vue"),
             meta: { title: "部门管理", icon: "Organization24Regular" },
           },
         ],

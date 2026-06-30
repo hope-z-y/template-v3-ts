@@ -3,7 +3,8 @@ import { STORE_KEY } from "@/utils/store-key";
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
-export const useUserStore = defineStore(STORE_KEY.UserStore, () => {  const userInfo = ref({
+export const useUserStore = defineStore(STORE_KEY.UserStore, () => {
+  const userInfo = ref({
     name: "张三",
     email: "zhangsan@example.com",
     role: "超级管理员",

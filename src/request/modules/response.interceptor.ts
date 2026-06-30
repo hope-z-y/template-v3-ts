@@ -7,12 +7,7 @@ import { SUCCESS_CODE, TOKEN_STORAGE_KEY } from "../types";
 const { message } = createDiscreteApi(["message"]);
 
 const isApiResponse = (payload: unknown): payload is ApiResponse => {
-  return (
-    typeof payload === "object" &&
-    payload !== null &&
-    "code" in payload &&
-    "data" in payload
-  );
+  return typeof payload === "object" && payload !== null && "code" in payload && "data" in payload;
 };
 
 const clearAuthAndRedirect = () => {
