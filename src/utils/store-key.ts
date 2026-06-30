@@ -1,0 +1,9 @@
+/** Pinia 中需要统一的Key */
+export const STORE_KEY = {
+  /** 用户仓库 */
+  UserStore: "UserStore",
+  /** 菜单Tag仓库 */
+  MenuTagStore: "MenuTagStore",
+  /** 菜单Tag数据缓存仓库 */
+  MenuTagDataCache: "MenuTagDataCache",
+};
