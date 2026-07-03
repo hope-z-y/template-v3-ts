@@ -16,8 +16,10 @@ if (theme.value === "dark") {
 
 <template>
   <n-config-provider :theme="currentTheme" class="size-full text-[#333333] dark:text-[#e5e5e5]">
-    <n-message-provider>
-      <RouterView />
-    </n-message-provider>
+    <div class="size-full">
+      <n-message-provider>
+        <RouterView />
+      </n-message-provider>
+    </div>
   </n-config-provider>
 </template>

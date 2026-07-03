@@ -30,7 +30,7 @@ export default defineComponent({
           {slots?.menu?.({ collapse })}
         </div>
 
-        <div class="size-full overflow-hidden grid grid-rows-[auto_1fr] gap-2">
+        <div class="size-full min-h-0 overflow-hidden grid grid-rows-[auto_minmax(0,1fr)] gap-2">
           {/* 顶部 */}
           <header class="px-4 py-1.5 rounded-md bg w-full flex flex-col gap-2">
             <div class="flex gap-4 w-full justify-between items-center ">
@@ -41,7 +41,7 @@ export default defineComponent({
           </header>
 
           {/* 内容 */}
-          <main class="size-full rounded-md overflow-clip">{slots.default?.()}</main>
+          <main class="size-full min-h-0 overflow-hidden rounded-md">{slots.default?.()}</main>
         </div>
       </div>
     );

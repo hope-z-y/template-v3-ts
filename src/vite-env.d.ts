@@ -3,7 +3,6 @@
 interface ImportMetaEnv {
   readonly VITE_APP_NAME: string;
   readonly VITE_API_PREFIX: string;
-  readonly VITE_PROXY_PREFIX: string;
   readonly VITE_PROXY_TARGET: string;
   readonly VITE_ROUTE_PREFIX: string;
   readonly VITE_API_TIMEOUT: string;

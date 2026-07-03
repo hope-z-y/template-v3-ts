@@ -7,10 +7,14 @@ export interface ApiResponse<T = unknown> {
   message: string;
 }
 
-/** 本地 token 存储 key */
-export const TOKEN_STORAGE_KEY = "template-v3-ts:token";
-
 /** 业务成功状态码 */
-export const SUCCESS_CODE = 0;
+export const SUCCESS_CODE = 200;
 
 export type RequestConfig = AxiosRequestConfig;
+
+declare module "axios" {
+  export interface InternalAxiosRequestConfig {
+    /** 标记该请求已尝试过 refresh 重试，避免无限循环 */
+    _retry?: boolean;
+  }
+}

@@ -8,6 +8,8 @@ import { bootstrap } from "./bootstrap";
 import { router } from "./router";
 /** 全局样式 */
 import "@/styles/common.css";
+/** 滚动条样式 */
+import "@/styles/scrollbar.css";
 /** 全局tailwindcss */
 import "@/styles/tailwind.css";
 

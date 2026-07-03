@@ -4,21 +4,17 @@
       <NAvatar round :src="UserAvatar" :size="44" class="shrink-0 shadow-sm" />
       <div class="min-w-0 flex-1">
         <div class="truncate text-sm font-semibold text-black/88 dark:text-white/90">
-          {{ userInfo.name }}
+          {{ userInfo?.nickname || userInfo?.username || "未命名" }}
         </div>
         <div class="mt-0.5 truncate text-xs text-black/45 dark:text-white/45">
-          {{ userInfo.email }}
+          {{ userInfo?.email || "未设置邮箱" }}
         </div>
       </div>
     </div>
 
     <div class="flex flex-wrap gap-1.5">
-      <NTag size="small" :bordered="false" type="info">
-        {{ userInfo.role }}
-      </NTag>
-      <NTag size="small" :bordered="false">
-        {{ userInfo.department }}
-      </NTag>
+      <NTag size="small" :bordered="false" type="info"> 角色信息展示 </NTag>
+      <NTag size="small" :bordered="false"> 部门信息展示 </NTag>
     </div>
 
     <div class="my-4 border-t border-black/6 dark:border-white/8" />
@@ -51,6 +47,7 @@ import { LockClosed24Regular, Person24Regular, SignOut24Regular } from "@vicons/
 import { useUserStore } from "@/stores";
 import UserAvatar from "@/assets/images/Vue.png";
 import type { Component } from "vue";
+import { storeToRefs } from "pinia";
 
 type UserActionKey = "profile" | "lock" | "logout";
 
@@ -65,7 +62,8 @@ const emit = defineEmits<{
   select: [key: UserActionKey];
 }>();
 
-const { userInfo, logout, lockScreen } = useUserStore();
+const { userInfo } = storeToRefs(useUserStore());
+const { logout, lockScreen } = useUserStore();
 
 const actions: UserActionItem[] = [
   {

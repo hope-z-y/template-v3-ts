@@ -1,5 +1,5 @@
 import { router } from "@/router";
-import { STORE_KEY } from "@/utils/store-key";
+import { STORE_KEY } from "@/utils/modules/store-key";
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import type { RouteLocationNormalizedLoaded } from "vue-router";
@@ -196,9 +196,7 @@ export const useMenuTagStore = defineStore(
     const closeAll = () => {
       const keptTags = tags.value.filter((item) => isHomeTag(item.path) || item.affixed);
       const removedPaths = new Set(
-        tags.value
-          .filter((item) => !isHomeTag(item.path) && !item.affixed)
-          .map((item) => item.path),
+        tags.value.filter((item) => !isHomeTag(item.path) && !item.affixed).map((item) => item.path),
       );
 
       tags.value = keptTags;

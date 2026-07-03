@@ -1,13 +1,20 @@
 <template>
-  <NMenu
-    :options="menus"
-    :value="activeKey"
-    :collapse="collapse"
-    :collapse-transition="false"
-    :render-label="renderMenuLabel"
-    :render-icon="renderMenuIcon"
-    @update:value="handleMenuUpdate"
-  />
+  <div class="grid grid-rows-[auto_1fr]">
+    <NGradientText type="success" class="m-0 shrink-0 text-xl font-bold! text-center py-2">
+      {{ appName }}
+    </NGradientText>
+  </div>
+  <div>
+    <NMenu
+      :options="menus"
+      :value="activeKey"
+      :collapse="collapse"
+      :collapse-transition="false"
+      :render-label="renderMenuLabel"
+      :render-icon="renderMenuIcon"
+      @update:value="handleMenuUpdate"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -15,10 +22,12 @@ import { useGlobalConfig } from "@/hooks";
 import { staticRoutes } from "@/router";
 import * as FluentIcons from "@vicons/fluent";
 import { Album24Regular } from "@vicons/fluent";
-import { NIcon, NMenu, type MenuOption } from "naive-ui";
+import { NIcon, NMenu, NGradientText, type MenuOption } from "naive-ui";
 import type { RouteRecordRaw } from "vue-router";
 import { computed, h } from "vue";
 import { useRoute, useRouter } from "vue-router";
+
+const appName = import.meta.env.VITE_APP_NAME;
 
 const { collapse } = useGlobalConfig();
 const route = useRoute();
@@ -55,9 +64,7 @@ const routesToMenuOptions = (routes: RouteRecordRaw[], parentPath = ""): RouteMe
     .filter((item) => !item.meta?.hidden)
     .map((item) => {
       const fullPath = resolveRoutePath(parentPath, item.path);
-      const children = item.children?.length
-        ? routesToMenuOptions(item.children, fullPath)
-        : undefined;
+      const children = item.children?.length ? routesToMenuOptions(item.children, fullPath) : undefined;
 
       const option: RouteMenuOption = {
         label: (item.meta?.title as string) || String(item.name ?? item.path),

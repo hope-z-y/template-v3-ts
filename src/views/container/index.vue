@@ -12,11 +12,8 @@
             @click="toggleCollapse"
           />
         </NIcon>
-        <!-- <h1 class="m-0 shrink-0 text-lg font-bold">中后台管理系统</h1> -->
-        <NGradientText type="warning" class="m-0 shrink-0 text-xl font-bold!">
-          {{ appName }}
-        </NGradientText>
-        <Breadcrumbs class="mt-1.5" />
+
+        <Breadcrumbs class="" />
       </div>
     </template>
     <template #user>
@@ -58,7 +55,7 @@
                 backgroundColor: 'red',
               }"
             >
-              {{ userInfo.name || "未命名" }}
+              {{ userInfo?.nickname || userInfo?.username || "未命名" }}
             </NAvatar>
           </template>
           <UserAction />
@@ -71,7 +68,7 @@
     <template #menu>
       <Menu />
     </template>
-    <div class="size-full">
+    <div class="size-full min-h-0">
       <RouterView :key="viewKey" />
     </div>
   </Layout>
@@ -80,7 +77,7 @@
 <script setup lang="ts">
 import { Layout } from "@/components";
 import { useGlobalConfig } from "@/hooks";
-import { NIcon, NAvatar, NTooltip, NPopover, NGradientText } from "naive-ui";
+import { NIcon, NAvatar, NTooltip, NPopover } from "naive-ui";
 import {
   FullScreenMaximize24Regular,
   FullScreenMinimize24Regular,
@@ -99,14 +96,13 @@ import Menu from "./modules/menu.vue";
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useMenuTagStore } from "@/stores/menu-tag";
-
-const appName = import.meta.env.VITE_APP_NAME;
+import { storeToRefs } from "pinia";
 
 const route = useRoute();
 const menuTagStore = useMenuTagStore();
 const viewKey = computed(() => menuTagStore.getViewKey(route.path));
 
-const { userInfo } = useUserStore();
+const { userInfo } = storeToRefs(useUserStore());
 const { theme, toggleTheme, collapse, toggleCollapse } = useGlobalConfig();
 const { isFullscreen, toggle } = useFullscreen();
 

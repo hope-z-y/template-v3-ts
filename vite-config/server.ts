@@ -1,8 +1,8 @@
 import type { ServerOptions } from "vite";
 
 export const createServerOptions = (env: Record<string, string>): ServerOptions => {
-  const proxyPrefix = env.VITE_PROXY_PREFIX || "/api-proxy";
-  const proxyTarget = env.VITE_PROXY_TARGET || "http://localhost:3000";
+  const proxyPrefix = env.VITE_API_PREFIX;
+  const proxyTarget = env.VITE_PROXY_TARGET;
 
   return {
     host: "0.0.0.0",
@@ -20,7 +20,7 @@ export const createServerOptions = (env: Record<string, string>): ServerOptions 
       [proxyPrefix]: {
         target: proxyTarget,
         changeOrigin: true,
-        rewrite: (path) => path.replace(new RegExp(`^${proxyPrefix}`), ""),
+        rewrite: (path) => path.replace(new RegExp(`^${proxyPrefix}`), "/api"),
         configure: (proxy) => {
           proxy.on("error", (error) => {
             console.error(`[vite proxy] ${proxyPrefix} error:`, error.message);

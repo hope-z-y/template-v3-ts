@@ -1,0 +1,98 @@
+import { ArrowReset24Regular, ChevronDown24Regular, ChevronUp24Regular, Search24Regular } from "@vicons/fluent";
+import { NButton, NForm, NIcon } from "naive-ui";
+import { Comment, Fragment, Text, computed, defineComponent, ref, type VNode } from "vue";
+
+function flattenVNodes(vnodes: VNode[]): VNode[] {
+  const result: VNode[] = [];
+
+  vnodes.forEach((vnode) => {
+    if (vnode.type === Fragment && Array.isArray(vnode.children)) {
+      result.push(...flattenVNodes(vnode.children as VNode[]));
+      return;
+    }
+
+    if (vnode.type === Comment || vnode.type === Text || typeof vnode.type === "symbol") {
+      return;
+    }
+
+    result.push(vnode);
+  });
+
+  return result;
+}
+
+export default defineComponent({
+  name: "SearchForm",
+  props: {
+    /** 每行显示的表单项列数 */
+    columns: {
+      type: Number,
+      default: 3,
+    },
+    /** 表单数据，传给 NForm */
+    model: {
+      type: Object as () => Record<string, unknown>,
+      default: undefined,
+    },
+  },
+  emits: ["search", "reset"],
+  setup(props, { slots, emit }) {
+    const expanded = ref(false);
+
+    const fields = computed(() => flattenVNodes(slots.default?.() ?? []));
+    const needCollapse = computed(() => fields.value.length > props.columns);
+
+    const isFieldVisible = (index: number) => {
+      if (!needCollapse.value || expanded.value) {
+        return true;
+      }
+
+      return index < props.columns;
+    };
+
+    return () => (
+      <div class="bg p-2 search-form">
+        <NForm model={props.model} labelPlacement="left" labelWidth="auto">
+          <div
+            class="w-full grid items-start gap-2"
+            style={{ gridTemplateColumns: `repeat(${props.columns}, minmax(0, 1fr)) auto` }}
+          >
+            {fields.value.map((field, index) => (
+              <div v-show={isFieldVisible(index)} class="min-w-0" key={index}>
+                {field}
+              </div>
+            ))}
+
+            <div
+              class="flex flex-wrap items-center justify-end gap-2 self-start"
+              style={{ gridColumn: props.columns + 1, gridRow: 1 }}
+            >
+              <NButton type="primary" onClick={() => emit("search")}>
+                {{
+                  icon: () => <NIcon component={Search24Regular} />,
+                  default: () => "搜索",
+                }}
+              </NButton>
+              <NButton onClick={() => emit("reset")}>
+                {{
+                  icon: () => <NIcon component={ArrowReset24Regular} />,
+                  default: () => "重置",
+                }}
+              </NButton>
+              {needCollapse.value && (
+                <NButton text type="primary" onClick={() => (expanded.value = !expanded.value)}>
+                  {{
+                    icon: () => (
+                      <NIcon>{expanded.value ? <ChevronUp24Regular /> : <ChevronDown24Regular />}</NIcon>
+                    ),
+                    default: () => (expanded.value ? "折叠" : "展开"),
+                  }}
+                </NButton>
+              )}
+            </div>
+          </div>
+        </NForm>
+      </div>
+    );
+  },
+});
