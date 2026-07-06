@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterView } from "vue-router";
-import { NConfigProvider, NMessageProvider, darkTheme, type GlobalTheme } from "naive-ui";
+import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme, zhCN, dateZhCN, type GlobalTheme } from "naive-ui";
 import { computed } from "vue";
 import { useGlobalConfig } from "@/hooks";
 
@@ -15,10 +15,17 @@ if (theme.value === "dark") {
 </script>
 
 <template>
-  <n-config-provider :theme="currentTheme" class="size-full text-[#333333] dark:text-[#e5e5e5]">
+  <n-config-provider
+    :locale="zhCN"
+    :date-locale="dateZhCN"
+    :theme="currentTheme"
+    class="size-full text-[#333333] dark:text-[#e5e5e5]"
+  >
     <div class="size-full">
       <n-message-provider>
-        <RouterView />
+        <n-dialog-provider>
+          <RouterView />
+        </n-dialog-provider>
       </n-message-provider>
     </div>
   </n-config-provider>

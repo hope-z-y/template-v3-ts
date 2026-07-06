@@ -19,25 +19,20 @@ export default defineComponent({
     const { collapse } = useGlobalConfig();
 
     return () => (
-      <div class="size-full grid grid-cols-[auto_1fr] p-4 gap-2 bg-gray-200 dark:bg-black">
+      <div class="size-full grid grid-cols-[auto_minmax(0,1fr)] p-4 gap-2 bg-gray-200 dark:bg-black">
         {/* 菜单 */}
-        <div
-          class={[
-            "rounded-lg h-full bg transition-all duration-300",
-            collapse.value ? "w-16" : "w-60",
-          ]}
-        >
+        <div class={["rounded-lg h-full bg transition-all duration-300", collapse.value ? "w-16" : "w-60"]}>
           {slots?.menu?.({ collapse })}
         </div>
 
-        <div class="size-full min-h-0 overflow-hidden grid grid-rows-[auto_minmax(0,1fr)] gap-2">
+        <div class="size-full min-h-0 min-w-0 overflow-hidden grid grid-rows-[auto_minmax(0,1fr)] gap-2">
           {/* 顶部 */}
-          <header class="px-4 py-1.5 rounded-md bg w-full flex flex-col gap-2">
-            <div class="flex gap-4 w-full justify-between items-center ">
+          <header class="px-4 py-1.5 rounded-md bg w-full min-w-0 overflow-hidden flex flex-col gap-2">
+            <div class="flex gap-4 w-full min-w-0 justify-between items-center overflow-hidden">
               <div class="min-w-0 flex-1">{slots.title?.({ collapse })}</div>
               {slots?.user?.({ collapse })}
             </div>
-            {slots?.menuTag?.({ collapse })}
+            <div class="w-full min-w-0 max-w-full overflow-hidden">{slots?.menuTag?.({ collapse })}</div>
           </header>
 
           {/* 内容 */}

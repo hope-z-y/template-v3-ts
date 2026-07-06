@@ -18,13 +18,13 @@ export interface ICreateMenuParams {
   icon?: string;
   /** 显示顺序 */
   sort?: number;
-  /** 是否显示：0显示 1隐藏 */
+  /** 是否显示：1显示 0隐藏 */
   visible?: number;
   /** 状态：1启用 0禁用 */
   status?: number;
-  /** 是否外链：0是 1否 */
+  /** 是否外链：1是 0否 */
   isFrame?: number;
-  /** 是否缓存：0缓存 1不缓存 */
+  /** 是否缓存：1缓存 0不缓存 */
   isCache?: number;
 }
 

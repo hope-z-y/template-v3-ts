@@ -1,5 +1,13 @@
 import { request } from "@/request";
-import type { ICreateUserParams, IGetAllUsersResponse, IUserList, IQueryUserParams, IUpdateUserParams, IUser } from "../../types";
+import type {
+  ICreateUserParams,
+  IGetAllUsersResponse,
+  IUserDetail,
+  IUserList,
+  IQueryUserParams,
+  IUpdateUserParams,
+  IUser,
+} from "../../types";
 
 /**
  * 分页查询用户列表
@@ -24,7 +32,7 @@ export const GetAllUsers = () => {
  * @returns 用户详情（含角色、岗位关联）
  */
 export const GetUserById = (id: number) => {
-  return request.get<string, IUser>(`/system/users/${id}`);
+  return request.get<string, IUserDetail>(`/system/users/${id}`);
 };
 
 /**
@@ -53,4 +61,14 @@ export const UpdateUser = (id: number, data: IUpdateUserParams) => {
  */
 export const DeleteUser = (id: number) => {
   return request.delete<string, null>(`/system/users/${id}`);
+};
+
+/**
+ * 重置用户密码
+ * @param id 用户 ID
+ * @param data RSA 加密后的新密码
+ * @returns 更新后的用户详情
+ */
+export const ResetUserPassword = (id: number, data: Pick<IUpdateUserParams, "password">) => {
+  return request.patch<string, IUserDetail>(`/system/users/${id}`, data);
 };

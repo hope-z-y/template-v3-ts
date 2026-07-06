@@ -1,7 +1,9 @@
+import type { IMenu } from "./system-management/menu-management";
+
 /** POST /auth/login 请求体 */
 export interface ISignInParams {
   /** 登录账号，2-50 字符 */
-  username: string;
+  account: string;
   /** RSA 公钥加密后的 Base64 密文 */
   password: string;
   /** 验证码（开启验证码时必填） */
@@ -37,6 +39,9 @@ export interface IPublicEncryptKeyResponse {
   /** RSA 公钥 PEM，供前端加密密码 */
   publicKey: string;
 }
+
+/** GET /auth/menus 响应体（当前用户角色可见的菜单树） */
+export type IGetUserMenusResponse = IMenu[];
 
 /** GET /auth/captcha 响应体 */
 export interface ICaptchaResponse {

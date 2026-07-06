@@ -53,20 +53,21 @@ export default defineComponent({
     return () => (
       <div class="bg p-2 search-form">
         <NForm model={props.model} labelPlacement="left" labelWidth="auto">
-          <div
-            class="w-full grid items-start gap-2"
-            style={{ gridTemplateColumns: `repeat(${props.columns}, minmax(0, 1fr)) auto` }}
-          >
-            {fields.value.map((field, index) => (
-              <div v-show={isFieldVisible(index)} class="min-w-0" key={index}>
-                {field}
-              </div>
-            ))}
-
+          <div class="flex w-full items-start gap-2">
+            {/* 左侧：仅放表单项，按 columns 列网格换行 */}
             <div
-              class="flex flex-wrap items-center justify-end gap-2 self-start"
-              style={{ gridColumn: props.columns + 1, gridRow: 1 }}
+              class="min-w-0 flex-1 grid items-start gap-2"
+              style={{ gridTemplateColumns: `repeat(${props.columns}, minmax(0, 1fr))` }}
             >
+              {fields.value.map((field, index) => (
+                <div v-show={isFieldVisible(index)} class="min-w-0" key={index}>
+                  {field}
+                </div>
+              ))}
+            </div>
+
+            {/* 右侧：操作按钮独占一列，下方不再放置表单项 */}
+            <div class="flex shrink-0 flex-wrap items-center justify-end gap-2 self-start">
               <NButton type="primary" onClick={() => emit("search")}>
                 {{
                   icon: () => <NIcon component={Search24Regular} />,

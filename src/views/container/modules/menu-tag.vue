@@ -1,38 +1,47 @@
 <template>
-  <LayoutGroup>
-    <motion.ul
-      layout
-      class="menu-tag-list m-0 flex list-none flex-wrap items-center gap-1.5 border-t border-t-gray-300 pt-2 dark:border-t-gray-600"
-      @contextmenu="handleListContextMenu"
-    >
-      <AnimatePresence mode="popLayout" :initial="false">
-        <motion.li
-          v-for="tag in tags"
-          :key="tag.path"
-          layout
-          class="menu-tag-item"
-          :initial="tagMotion.initial"
-          :animate="tagMotion.animate"
-          :exit="tagMotion.exit"
-          :transition="tagMotion.transition"
-          @contextmenu="(e) => handleContextMenu(e, tag.path)"
-          @click="handleTagClick(tag.path)"
-        >
-          <NTag
-            :bordered="false"
-            :type="getTagType(tag)"
-            :closable="tag.path !== '/home'"
-            @close="(e: MouseEvent) => handleClose(e, tag.path)"
+  <div
+    ref="scrollRef"
+    class="scrollbar-none w-full max-w-full min-w-0 overflow-x-auto overflow-y-hidden border-t border-t-gray-300 pt-2 dark:border-t-gray-600"
+    :class="{ 'cursor-grabbing select-none': isDragging }"
+    @mousedown="onDragStart"
+    @wheel="onWheel"
+  >
+    <LayoutGroup>
+      <motion.ul
+        layout
+        class="m-0 flex w-max list-none flex-nowrap items-center gap-1.5"
+        @contextmenu="handleListContextMenu"
+      >
+        <AnimatePresence mode="popLayout" :initial="false">
+          <motion.li
+            v-for="tag in tags"
+            :key="tag.path"
+            layout
+            class="flex shrink-0 cursor-pointer origin-center"
+            :data-path="tag.path"
+            :initial="tagMotion.initial"
+            :animate="tagMotion.animate"
+            :exit="tagMotion.exit"
+            :transition="tagMotion.transition"
+            @contextmenu="(e) => handleContextMenu(e, tag.path)"
+            @click="handleTagClick(tag.path)"
           >
-            <template #icon>
-              <NIcon :size="16" :component="getTagIcon(tag)" :color="getIconColor(tag)" />
-            </template>
-            {{ tag.title }}
-          </NTag>
-        </motion.li>
-      </AnimatePresence>
-    </motion.ul>
-  </LayoutGroup>
+            <NTag
+              :bordered="false"
+              :type="getTagType(tag)"
+              :closable="tag.path !== '/home'"
+              @close="(e: MouseEvent) => handleClose(e, tag.path)"
+            >
+              <template #icon>
+                <NIcon :size="16" :component="getTagIcon(tag)" :color="getIconColor(tag)" />
+              </template>
+              {{ tag.title }}
+            </NTag>
+          </motion.li>
+        </AnimatePresence>
+      </motion.ul>
+    </LayoutGroup>
+  </div>
 
   <NDropdown
     placement="bottom-start"
@@ -49,6 +58,7 @@
 
 <script setup lang="ts">
 import { useMenuTagStore, type MenuTagItem } from "@/stores/menu-tag";
+import { getFluentIconComponent } from "@/utils";
 import { NIcon, NDropdown, NTag, useThemeVars, type TagProps } from "naive-ui";
 import {
   BoardSplit24Regular,
@@ -60,37 +70,32 @@ import {
   TextGrammarArrowRight24Regular,
   TextGrammarDismiss24Regular,
 } from "@vicons/fluent";
-import * as FluentIcons from "@vicons/fluent";
-import { Album24Regular } from "@vicons/fluent";
 import { AnimatePresence, LayoutGroup, motion } from "motion-v";
 import { storeToRefs } from "pinia";
-import { computed, h, nextTick, ref } from "vue";
+import { computed, h, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useRouter } from "vue-router";
+
+const DRAG_THRESHOLD = 5;
 
 const HOME_PATH = "/home";
 
 type MenuActionKey =
-  | "closeLeftMenu"
-  | "closeRightMenu"
-  | "closeAllMenu"
-  | "closeCurrentPage"
-  | "refreshPage"
-  | "affixedCurrentMenu";
+  "closeLeftMenu" | "closeRightMenu" | "closeAllMenu" | "closeCurrentPage" | "refreshPage" | "affixedCurrentMenu";
 
 const router = useRouter();
 const themeVars = useThemeVars();
 const menuTagStore = useMenuTagStore();
-const { tags } = storeToRefs(menuTagStore);
-const {
-  isActive,
-  closeLeft,
-  closeRight,
-  closeAll,
-  closeCurrent,
-  refreshTag,
-  toggleAffix,
-  removeTag,
-} = menuTagStore;
+const { tags, activePath } = storeToRefs(menuTagStore);
+
+const scrollRef = ref<HTMLElement | null>(null);
+const isDragging = ref(false);
+const dragState = {
+  active: false,
+  startX: 0,
+  scrollLeft: 0,
+  moved: false,
+};
+const { isActive, closeLeft, closeRight, closeAll, closeCurrent, refreshTag, toggleAffix, removeTag } = menuTagStore;
 
 /** 标签进入、退出与排序时的 motion 配置 */
 const tagMotion = {
@@ -147,15 +152,9 @@ const actions = computed(() => {
   return menuActions;
 });
 
-const getIconComponent = (iconName?: string) => {
-  if (!iconName) return BoardSplit24Regular;
-  return (FluentIcons as Record<string, typeof Album24Regular>)[iconName] ?? BoardSplit24Regular;
-};
-
-/** 固定标签使用 Tag24Regular，其余使用路由 meta.icon */
 const getTagIcon = (tag: MenuTagItem) => {
   if (tag.affixed) return Tag24Regular;
-  return getIconComponent(tag.icon);
+  return getFluentIconComponent(tag.icon) ?? BoardSplit24Regular;
 };
 
 /** 选中标签图标使用 success 色，固定但未选中使用 warning 色 */
@@ -173,10 +172,96 @@ const getTagType = (tag: MenuTagItem): TagProps["type"] => {
 };
 
 const handleTagClick = (path: string) => {
+  if (dragState.moved) return;
   if (path !== router.currentRoute.value.path) {
     router.push(path);
   }
 };
+
+/** 将当前激活标签滚动到可视区域中央 */
+const scrollActiveTagIntoView = (path: string) => {
+  const container = scrollRef.value;
+  if (!container || !path) return;
+
+  const tagEl = container.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`);
+  tagEl?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+};
+
+watch(
+  activePath,
+  (path) => {
+    nextTick(() => scrollActiveTagIntoView(path));
+  },
+  { immediate: true },
+);
+
+watch(tags, () => {
+  nextTick(() => scrollActiveTagIntoView(activePath.value));
+});
+
+const onDragMove = (e: MouseEvent) => {
+  const el = scrollRef.value;
+  if (!el || !dragState.active) return;
+
+  const delta = e.pageX - dragState.startX;
+  if (!isDragging.value) {
+    if (Math.abs(delta) <= DRAG_THRESHOLD) return;
+    isDragging.value = true;
+    dragState.moved = true;
+  }
+
+  el.scrollLeft = dragState.scrollLeft - delta;
+  e.preventDefault();
+};
+
+const onDragEnd = () => {
+  dragState.active = false;
+  isDragging.value = false;
+  document.removeEventListener("mousemove", onDragMove);
+  document.removeEventListener("mouseup", onDragEnd);
+
+  if (dragState.moved) {
+    window.setTimeout(() => {
+      dragState.moved = false;
+    }, 0);
+  }
+};
+
+const canScrollHorizontally = () => {
+  const el = scrollRef.value;
+  if (!el) return false;
+  return el.scrollWidth > el.clientWidth + 1;
+};
+
+const onDragStart = (e: MouseEvent) => {
+  const el = scrollRef.value;
+  if (!el || e.button !== 0) return;
+  if ((e.target as HTMLElement).closest(".n-tag__close")) return;
+  if (!canScrollHorizontally()) return;
+
+  dragState.active = true;
+  dragState.moved = false;
+  dragState.startX = e.pageX;
+  dragState.scrollLeft = el.scrollLeft;
+
+  document.addEventListener("mousemove", onDragMove);
+  document.addEventListener("mouseup", onDragEnd);
+};
+
+/** 鼠标滚轮纵向滚动时转为横向滚动 */
+const onWheel = (e: WheelEvent) => {
+  const el = scrollRef.value;
+  if (!el || !canScrollHorizontally()) return;
+  if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+
+  e.preventDefault();
+  el.scrollLeft += e.deltaY;
+};
+
+onBeforeUnmount(() => {
+  document.removeEventListener("mousemove", onDragMove);
+  document.removeEventListener("mouseup", onDragEnd);
+});
 
 const handleClose = (e: MouseEvent, path: string) => {
   e.stopPropagation();
@@ -230,12 +315,3 @@ const handleSelect = (key: string | number) => {
 
 const onClickOutside = () => (showDropdown.value = false);
 </script>
-
-<style scoped>
-.menu-tag-item {
-  display: flex;
-  flex-shrink: 0;
-  cursor: pointer;
-  transform-origin: center center;
-}
-</style>

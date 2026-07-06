@@ -4,7 +4,7 @@
       <NAvatar round :src="UserAvatar" :size="44" class="shrink-0 shadow-sm" />
       <div class="min-w-0 flex-1">
         <div class="truncate text-sm font-semibold text-black/88 dark:text-white/90">
-          {{ userInfo?.nickname || userInfo?.username || "未命名" }}
+          {{ userInfo?.username || userInfo?.account || "未命名" }}
         </div>
         <div class="mt-0.5 truncate text-xs text-black/45 dark:text-white/45">
           {{ userInfo?.email || "未设置邮箱" }}

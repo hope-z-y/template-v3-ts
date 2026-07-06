@@ -6,4 +6,6 @@ export const STORE_KEY = {
   MenuTagStore: "MenuTagStore",
   /** 菜单Tag数据缓存仓库 */
   MenuTagDataCache: "MenuTagDataCache",
+  /** 侧边栏菜单仓库 */
+  MenuStore: "MenuStore",
 };

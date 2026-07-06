@@ -1,4 +1,5 @@
 import type { IAuthTokenResponse, IUser } from "@/api/types";
+import { useMenuStore } from "@/stores/menu";
 import { useMenuTagStore } from "@/stores/menu-tag";
 import { STORE_KEY } from "@/utils/modules/store-key";
 import { defineStore } from "pinia";
@@ -36,6 +37,7 @@ export const useUserStore = defineStore(
         // 退出接口失败仍清理本地会话
       } finally {
         useMenuTagStore().reset();
+        useMenuStore().reset();
         clearAuth();
 
         const { router } = await import("@/router");

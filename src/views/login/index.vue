@@ -6,7 +6,7 @@
     >
       <h1 class="m-0 mb-2 text-center text-[22px] font-semibold text-black/88 dark:text-white/90">登录</h1>
 
-      <NInput v-model:value="form.username" placeholder="请输入用户名" size="large" @keyup.enter="signIn" />
+      <NInput v-model:value="form.account" placeholder="请输入用户名" size="large" @keyup.enter="signIn" />
 
       <NInput
         v-model:value="form.password"
@@ -42,7 +42,7 @@
 import { GetCaptchaCode, GetPublicEncryptKey, SignIn } from "@/api/auth";
 import type { ICaptchaResponse, ISignInParams } from "@/api/types";
 import { useLoading } from "@/hooks";
-import { useUserStore } from "@/stores";
+import { useMenuStore, useUserStore } from "@/stores";
 import { Encrypt } from "@/utils";
 import { NButton, NInput, useMessage } from "naive-ui";
 import { ref } from "vue";
@@ -52,6 +52,7 @@ const message = useMessage();
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
+const menuStore = useMenuStore();
 
 const { start, stop } = useLoading("#app");
 
@@ -60,7 +61,7 @@ const { start, stop } = useLoading("#app");
 const submitting = ref(false);
 
 const form = ref({
-  username: "",
+  account: "",
   password: "",
   code: "",
 });
@@ -77,7 +78,7 @@ const signIn = async () => {
     }
 
     const data: ISignInParams = {
-      username: form.value.username.trim(),
+      account: form.value.account.trim(),
       password: pwd,
     };
 
@@ -88,6 +89,7 @@ const signIn = async () => {
 
     const result = await SignIn(data);
     userStore.setTokens(result);
+    menuStore.reset();
     message.success("登录成功");
 
     const redirect = route.query.redirect;
@@ -100,8 +102,6 @@ const signIn = async () => {
     stop();
   }
 };
-/** 校验表单 */
-const validate = () => {};
 //#endregion
 
 // #region 获取验证码

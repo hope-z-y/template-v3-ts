@@ -1,6 +1,7 @@
 import { request } from "@/request";
 import type {
   ICaptchaResponse,
+  IGetUserMenusResponse,
   IPublicEncryptKeyResponse,
   IRefreshTokenParams,
   IRefreshTokenResponse,
@@ -48,4 +49,12 @@ export const GetPublicEncryptKey = () => {
  */
 export const RefreshToken = (data: IRefreshTokenParams) => {
   return request.post<string, IRefreshTokenResponse>("/auth/refresh", data);
+};
+
+/**
+ * 获取当前登录用户可见的菜单树（按角色过滤）
+ * @returns 菜单树，用于动态路由与侧边栏
+ */
+export const GetUserMenus = () => {
+  return request.get<string, IGetUserMenusResponse>("/auth/menus");
 };

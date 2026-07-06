@@ -46,8 +46,8 @@ export const createDeptColumns = (handlers: IDeptColumnHandlers): DataTableColum
     title: RenderColumnTitle(Organization24Regular, "部门名称"),
     key: "deptName",
     minWidth: 200,
-    align: "center",
-    titleAlign: "center",
+    align: "left",
+    titleAlign: "left",
     ellipsis: { tooltip: true },
   },
   {

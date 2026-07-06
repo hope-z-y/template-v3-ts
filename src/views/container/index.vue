@@ -55,7 +55,7 @@
                 backgroundColor: 'red',
               }"
             >
-              {{ userInfo?.nickname || userInfo?.username || "未命名" }}
+              {{ userInfo?.username || userInfo?.account || "未命名" }}
             </NAvatar>
           </template>
           <UserAction />

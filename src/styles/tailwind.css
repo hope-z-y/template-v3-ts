@@ -1,11 +1,29 @@
 @import "tailwindcss";
 
-@theme {
-}
+@theme {}
 
 @layer base {
   .bg {
     @apply bg-white dark:bg-[#202020];
+  }
+
+  /* 设置naive-ui的模态框自定义title样式类 */
+  .naive-modal-title {
+    @apply !font-bold border-b pb-2 border-gray-300 dark:border-gray-700;
+  }
+}
+
+@layer utilities {
+  /* 覆盖全局 scrollbar.css，用于不需要滚动条的横向/纵向容器 */
+  .scrollbar-none {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 }
 

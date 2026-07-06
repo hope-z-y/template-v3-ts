@@ -149,11 +149,11 @@ const userList = ref<IUserOption[]>([]);
 const selectedLeaderId = ref<number | null>(null);
 const formModel = ref<ICreateDeptParams>(createDefaultForm());
 
-const getUserDisplayName = (user: IUserOption) => user.nickname?.trim() || user.username;
+const getUserDisplayName = (user: IUserOption) => user.username?.trim() || user.account;
 
 const getUserOptionLabel = (user: IUserOption) => {
   const displayName = getUserDisplayName(user);
-  return displayName === user.username ? displayName : `${displayName}（${user.username}）`;
+  return displayName === user.account ? displayName : `${displayName}（${user.account}）`;
 };
 
 const userOptions = computed<LeaderOption[]>(() =>
@@ -170,9 +170,7 @@ const findLeaderUserId = (leader?: string | null) => {
   const name = leader?.trim();
   if (!name) return null;
 
-  const matched = userList.value.find(
-    (user) => getUserDisplayName(user) === name || user.username === name,
-  );
+  const matched = userList.value.find((user) => getUserDisplayName(user) === name || user.account === name);
   return matched?.id ?? null;
 };
 

@@ -1,4 +1,5 @@
 import { router } from "@/router";
+import { useMenuStore } from "@/stores/menu";
 import { STORE_KEY } from "@/utils/modules/store-key";
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
@@ -108,7 +109,7 @@ export const useMenuTagStore = defineStore(
       tags.value.push({
         path: route.path,
         title: route.meta.title as string,
-        icon: route.meta.icon as string | undefined,
+        icon: useMenuStore().getIconByPath(route.path) ?? (route.meta.icon as string | undefined),
         affixed: route.meta.affix as boolean | undefined,
       });
       ensureHomeTag();

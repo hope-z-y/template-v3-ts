@@ -1,9 +1,16 @@
 import type { RouteLocation, RouteLocationNormalizedLoaded, RouteRecordRaw } from "vue-router";
 
+/** 容器布局路由名，动态路由挂载点 */
+export const CONTAINER_ROUTE_NAME = "Container";
+
+/** 登录页路由名 */
+export const LOGIN_ROUTE_NAME = "Login";
+
+/** 固定路由：登录页 + 容器壳（首页始终可访问） */
 export const staticRoutes: RouteRecordRaw[] = [
   {
     path: "/",
-    name: "Container",
+    name: CONTAINER_ROUTE_NAME,
     component: () => import("@/views/container/index.vue"),
     redirect: (_to: RouteLocation, _from: RouteLocationNormalizedLoaded) => {
       return "/home";
@@ -13,45 +20,13 @@ export const staticRoutes: RouteRecordRaw[] = [
         path: "home",
         name: "Home",
         component: () => import("@/views/home/index.vue"),
-        meta: { title: "首页", icon: "AlignCenterHorizontal20Regular" },
-      },
-      {
-        path: "system-management",
-        name: "SystemManagement",
-        redirect: "/system-management/user-management",
-        meta: { title: "系统管理", icon: "Settings24Regular" },
-        children: [
-          {
-            path: "user-management",
-            name: "UserManagement",
-            component: () => import("@/views/system-managment/user-management/index.vue"),
-            meta: { title: "用户管理", icon: "People24Regular" },
-          },
-          {
-            path: "role-management",
-            name: "RoleManagement",
-            component: () => import("@/views/system-managment/role-management/index.vue"),
-            meta: { title: "角色管理", icon: "Shield24Regular" },
-          },
-          {
-            path: "menu-management",
-            name: "MenuManagement",
-            component: () => import("@/views/system-managment/menu-management/index.vue"),
-            meta: { title: "菜单管理", icon: "TextBulletListSquare24Regular" },
-          },
-          {
-            path: "dept-management",
-            name: "DeptManagement",
-            component: () => import("@/views/system-managment/dept-management/index.vue"),
-            meta: { title: "部门管理", icon: "Organization24Regular" },
-          },
-        ],
+        meta: { title: "首页", icon: "Home24Regular", affixed: true },
       },
     ],
   },
   {
     path: "/login",
-    name: "Login",
+    name: LOGIN_ROUTE_NAME,
     component: () => import("@/views/login/index.vue"),
     meta: { title: "登录" },
   },

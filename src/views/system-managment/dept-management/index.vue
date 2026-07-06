@@ -1,7 +1,7 @@
 <!-- 系统管理 -> 部门管理 -->
 
 <template>
-  <Page>
+  <Page v-model:column-options="columnOptions" title="部门管理" @refresh="fetchTree">
     <template #search>
       <SearchForm :model="query" :columns="3" @search="fetchTree" @reset="handleReset">
         <NFormItem label="部门名称" path="deptName">
@@ -13,13 +13,11 @@
             :options="statusOptions"
             placeholder="请选择状态"
             clearable
-            class="w-full min-w-[160px]"
+            class="w-full"
           />
         </NFormItem>
       </SearchForm>
     </template>
-
-    <template #title>部门管理</template>
 
     <template #toolbar>
       <NButton type="primary" @click="handleCreate">
@@ -32,32 +30,41 @@
       </NButton>
     </template>
 
-    <div ref="pageRef" class="min-h-0 h-full overflow-hidden">
+    <template #default="maxHeight">
       <NDataTable
-        class="h-full"
         :columns="columns"
         :data="tableData"
         :loading="loading"
         :scroll-x="1200"
-        :flex-height="true"
         :row-key="(row) => row.id"
         children-key="children"
         default-expand-all
+        :max-height="maxHeight - 20"
+        striped
       />
-    </div>
-
-    <DeptForm v-model:show="formVisible" :mode="formMode" :record="editingRecord" @success="fetchTree" />
+    </template>
   </Page>
+
+  <DeptForm v-model:show="formVisible" :mode="formMode" :record="editingRecord" @success="fetchTree" />
 </template>
 
 <script setup lang="ts">
 import { DeleteDept, GetDeptTree } from "@/api/system-management";
 import type { IDept } from "@/api/types";
-import { Page, SearchForm } from "@/components";
-import { useLoading } from "@/hooks";
+import { Page, SearchForm, type PageColumnOption } from "@/components";
 import { Add24Regular } from "@vicons/fluent";
-import { NButton, NDataTable, NFormItem, NIcon, NInput, NSelect, createDiscreteApi, useMessage } from "naive-ui";
-import { computed, onMounted, reactive, ref, useTemplateRef } from "vue";
+import {
+  NButton,
+  NDataTable,
+  NFormItem,
+  NIcon,
+  NInput,
+  NSelect,
+  createDiscreteApi,
+  useMessage,
+  type DataTableColumns,
+} from "naive-ui";
+import { computed, onMounted, reactive, ref } from "vue";
 import { createDeptColumns, statusOptions } from "./data";
 import DeptForm from "./modules/form.vue";
 
@@ -68,9 +75,6 @@ interface DeptQuery {
 
 const message = useMessage();
 const { dialog } = createDiscreteApi(["dialog"]);
-
-const pageRef = useTemplateRef<HTMLDivElement>("pageRef");
-const { start, stop } = useLoading(pageRef);
 
 const loading = ref(false);
 const deptTreeRaw = ref<IDept[]>([]);
@@ -142,14 +146,11 @@ const handleDelete = (row: IDept) => {
 const fetchTree = async () => {
   try {
     loading.value = true;
-    start();
-
     deptTreeRaw.value = await GetDeptTree();
   } catch {
     deptTreeRaw.value = [];
   } finally {
     loading.value = false;
-    stop();
   }
 };
 
@@ -158,9 +159,24 @@ const handleReset = () => {
   query.status = undefined;
 };
 
-const columns = createDeptColumns({
-  onEdit: handleEdit,
-  onDelete: handleDelete,
+const columnOptions = ref<PageColumnOption[]>([
+  { key: "deptName", title: "部门名称", visible: true },
+  { key: "sort", title: "显示顺序", visible: true },
+  { key: "leader", title: "负责人", visible: true },
+  { key: "phone", title: "联系电话", visible: true },
+  { key: "email", title: "邮箱", visible: true },
+  { key: "status", title: "状态", visible: true },
+  { key: "createdAt", title: "创建时间", visible: true },
+  { key: "actions", title: "操作", visible: true, disabled: true },
+]);
+
+const columns = computed<DataTableColumns<IDept>>(() => {
+  const visibleKeys = new Set(columnOptions.value.filter((item) => item.visible).map((item) => item.key));
+
+  return createDeptColumns({
+    onEdit: handleEdit,
+    onDelete: handleDelete,
+  }).filter((column) => "key" in column && column.key && visibleKeys.has(String(column.key)));
 });
 
 onMounted(() => {
