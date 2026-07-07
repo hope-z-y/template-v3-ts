@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <Layout>
     <template #title>
       <div class="flex min-w-0 flex-1 items-center gap-4">
@@ -18,7 +18,7 @@
     </template>
     <template #user>
       <div class="inline-flex gap-4 items-center shrink-0">
-        <Search />
+        <Search :items="menuSearchItems" />
         <NTooltip trigger="hover">
           <template #trigger>
             <NIcon
@@ -38,12 +38,6 @@
             />
           </template>
           {{ theme === "dark" ? "浅色模式" : "深色模式" }}
-        </NTooltip>
-        <NTooltip trigger="hover">
-          <template #trigger>
-            <NIcon :size="24" :component="Alert24Regular" />
-          </template>
-          消息通知
         </NTooltip>
         <NPopover v-model:show="userPopoverVisible" trigger="hover" placement="bottom-end">
           <template #trigger>
@@ -69,7 +63,12 @@
       <Menu />
     </template>
     <div class="size-full min-h-0">
-      <RouterView :key="viewKey" />
+      <RouterView v-slot="{ Component, route: viewRoute }">
+        <KeepAlive>
+          <component :is="Component" v-if="viewRoute.meta.keepAlive" :key="viewKey" />
+        </KeepAlive>
+        <component :is="Component" v-if="!viewRoute.meta.keepAlive" :key="viewKey" />
+      </RouterView>
     </div>
   </Layout>
 </template>
@@ -77,36 +76,65 @@
 <script setup lang="ts">
 import { Layout } from "@/components";
 import { useGlobalConfig } from "@/hooks";
-import { NIcon, NAvatar, NTooltip, NPopover } from "naive-ui";
-import {
-  FullScreenMaximize24Regular,
-  FullScreenMinimize24Regular,
-  WeatherSunny24Regular,
-  WeatherMoon24Regular,
-  Alert24Regular,
-  TextContinuous24Regular,
-} from "@vicons/fluent";
+import { useMenuStore, useUserStore } from "@/stores";
+import { useMenuTagStore } from "@/stores/menu-tag";
+import type { RouteMenuOption } from "@/utils";
+import FullScreenMaximize24Regular from "@vicons/fluent/es/FullScreenMaximize24Regular";
+import FullScreenMinimize24Regular from "@vicons/fluent/es/FullScreenMinimize24Regular";
+import TextContinuous24Regular from "@vicons/fluent/es/TextContinuous24Regular";
+import WeatherMoon24Regular from "@vicons/fluent/es/WeatherMoon24Regular";
+import WeatherSunny24Regular from "@vicons/fluent/es/WeatherSunny24Regular";
 import { useFullscreen } from "@vueuse/core";
-import Search from "./modules/search.vue";
-import MenuTag from "./modules/menu-tag.vue";
-import Breadcrumbs from "./modules/breadcrumb.vue";
-import { useUserStore } from "@/stores";
-import UserAction from "./modules/user-action.vue";
-import Menu from "./modules/menu.vue";
+import { NAvatar, NIcon, NPopover, NTooltip } from "naive-ui";
+import { storeToRefs } from "pinia";
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
-import { useMenuTagStore } from "@/stores/menu-tag";
-import { storeToRefs } from "pinia";
+import Breadcrumbs from "./modules/breadcrumb.vue";
+import Menu from "./modules/menu.vue";
+import MenuTag from "./modules/menu-tag.vue";
+import Search from "./modules/search.vue";
+import UserAction from "./modules/user-action.vue";
+
+interface MenuSearchItem {
+  id: string;
+  label: string;
+  path?: string;
+  keywords?: string[];
+}
 
 const route = useRoute();
 const menuTagStore = useMenuTagStore();
 const viewKey = computed(() => menuTagStore.getViewKey(route.path));
+const menuStore = useMenuStore();
+const { menus } = storeToRefs(menuStore);
 
 const { userInfo } = storeToRefs(useUserStore());
 const { theme, toggleTheme, collapse, toggleCollapse } = useGlobalConfig();
 const { isFullscreen, toggle } = useFullscreen();
 
 const userPopoverVisible = ref(false);
+
+const flattenMenuSearchItems = (items: RouteMenuOption[], parents: string[] = []): MenuSearchItem[] => {
+  return items.flatMap((item) => {
+    const label = item.label;
+    const nextParents = [...parents, label];
+    const current =
+      item.navigable && !item.href
+        ? [
+            {
+              id: item.key,
+              label: nextParents.join(" / "),
+              path: item.key,
+              keywords: [label, item.key, item.permission ?? ""].filter(Boolean),
+            },
+          ]
+        : [];
+
+    return [...current, ...flattenMenuSearchItems(item.children ?? [], nextParents)];
+  });
+};
+
+const menuSearchItems = computed(() => flattenMenuSearchItems(menus.value));
 </script>
 
 <style scoped></style>

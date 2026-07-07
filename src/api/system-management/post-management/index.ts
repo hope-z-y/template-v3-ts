@@ -1,11 +1,5 @@
 import { request } from "@/request";
-import type {
-  ICreatePostParams,
-  IGetPostListResponse,
-  IPost,
-  IQueryPostParams,
-  IUpdatePostParams,
-} from "../../types";
+import type { ICreatePostParams, IGetPostListResponse, IPost, IQueryPostParams, IUpdatePostParams } from "../../types";
 
 /**
  * 分页查询岗位列表
@@ -52,3 +46,9 @@ export const UpdatePost = (id: number, data: IUpdatePostParams) => {
 export const DeletePost = (id: number) => {
   return request.delete<string, null>(`/system/posts/${id}`);
 };
+
+export const getPostList = GetPostList;
+export const getPostById = GetPostById;
+export const createPost = CreatePost;
+export const updatePost = UpdatePost;
+export const deletePost = DeletePost;

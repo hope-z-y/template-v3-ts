@@ -1,4 +1,5 @@
 import type { IMenu } from "./system-management/menu-management";
+import type { IUser } from "./system-management/user-management";
 
 /** POST /auth/login 请求体 */
 export interface ISignInParams {
@@ -43,12 +44,22 @@ export interface IPublicEncryptKeyResponse {
 /** GET /auth/menus 响应体（当前用户角色可见的菜单树） */
 export type IGetUserMenusResponse = IMenu[];
 
+/** GET /auth/profile 响应体 */
+export interface IUserProfile {
+  /** 当前登录用户 */
+  user: IUser;
+  /** 角色编码列表 */
+  roles: string[];
+  /** 权限标识列表 */
+  permissions: string[];
+}
+
 /** GET /auth/captcha 响应体 */
 export interface ICaptchaResponse {
   /** 验证码功能是否开启 */
   enabled: boolean;
   /** 验证码 key，登录时需回传 */
   captchaKey?: string;
-  /** SVG 字符串，可直接渲染 */
+  /** 验证码图片，推荐 data:image/*、图片路径或后端净化后的 SVG 字符串 */
   img?: string;
 }

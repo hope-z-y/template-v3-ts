@@ -115,3 +115,15 @@ export const UpdateDictData = (id: number, data: IUpdateDictDataParams) => {
 export const DeleteDictData = (id: number) => {
   return request.delete<string, null>(`/system/dict/data/${id}`);
 };
+
+export const getDictTypeList = GetDictTypeList;
+export const getDictTypeById = GetDictTypeById;
+export const createDictType = CreateDictType;
+export const updateDictType = UpdateDictType;
+export const deleteDictType = DeleteDictType;
+export const getDictDataList = GetDictDataList;
+export const getDictDataByType = GetDictDataByType;
+export const getDictDataById = GetDictDataById;
+export const createDictData = CreateDictData;
+export const updateDictData = UpdateDictData;
+export const deleteDictData = DeleteDictData;

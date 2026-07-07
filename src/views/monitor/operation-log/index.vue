@@ -1,4 +1,4 @@
-<!-- 系统监控 -> 操作日志 -->
+﻿<!-- 系统监控 -> 操作日志 -->
 
 <template>
   <Page v-model:column-options="columnOptions" title="操作日志" @refresh="getOperLogList">
@@ -23,12 +23,14 @@
     </template>
 
     <template #toolbar>
-      <NButton type="error" @click="handleClean">
-        <template #icon>
-          <NIcon :component="Delete24Regular" />
-        </template>
-        清空
-      </NButton>
+      <Permission value="monitor:operation-log:delete">
+        <NButton type="error" @click="handleClean">
+          <template #icon>
+            <NIcon :component="Delete24Regular" />
+          </template>
+          清空
+        </NButton>
+      </Permission>
     </template>
 
     <template #default="maxHeight">
@@ -85,8 +87,9 @@ import {
   GetOperLogList,
 } from "@/api/system-management/log-management/modules/operation-log";
 import type { IOperLog, IQueryOperLogParams } from "@/api/types";
-import { Page, SearchForm, type PageColumnOption } from "@/components";
-import { Delete24Regular } from "@vicons/fluent";
+import { Page, Permission, SearchForm } from "@/components";
+import { useColumnVisibility, useDeleteConfirm, useTableQuery } from "@/hooks";
+import Delete24Regular from "@vicons/fluent/es/Delete24Regular";
 import {
   NButton,
   NDataTable,
@@ -107,6 +110,7 @@ import { createOperLogColumns, operStatusMap, operStatusOptions } from "./data";
 
 const message = useMessage();
 const dialog = useDialog();
+const { confirmDelete } = useDeleteConfirm();
 
 interface OperLogQuery {
   title?: string;
@@ -121,33 +125,13 @@ const createDefaultQuery = (): OperLogQuery => ({
 });
 
 const query = reactive<OperLogQuery>(createDefaultQuery());
-const loading = ref(false);
-const tableData = ref<IOperLog[]>([]);
 const detailVisible = ref(false);
 const detailRecord = ref<IOperLog | null>(null);
 
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  itemCount: 0,
-  showSizePicker: true,
-  pageSizes: [10, 20, 50, 100],
-  prefix: ({ itemCount }: { itemCount?: number }) => `共 ${itemCount ?? 0} 条`,
-  onChange: (page: number) => {
-    pagination.page = page;
-    getOperLogList();
-  },
-  onUpdatePageSize: (pageSize: number) => {
-    pagination.pageSize = pageSize;
-    pagination.page = 1;
-    getOperLogList();
-  },
-});
-
-const buildQueryParams = (): IQueryOperLogParams => {
+const buildQueryParams = (page: number, pageSize: number): IQueryOperLogParams => {
   const params: IQueryOperLogParams = {
-    pageNum: pagination.page,
-    pageSize: pagination.pageSize,
+    pageNum: page,
+    pageSize,
   };
 
   const title = query.title?.trim();
@@ -160,43 +144,34 @@ const buildQueryParams = (): IQueryOperLogParams => {
   return params;
 };
 
-const getOperLogList = async () => {
-  try {
-    loading.value = true;
-    const { rows, total } = await GetOperLogList(buildQueryParams());
-    tableData.value = rows;
-    pagination.itemCount = total;
-  } finally {
-    loading.value = false;
-  }
-};
+// 远程分页、loading 和页码切换统一交给 useTableQuery，页面只保留业务查询条件。
+const {
+  loading,
+  tableData,
+  pagination,
+  refresh: getOperLogList,
+  search,
+} = useTableQuery<IOperLog, IQueryOperLogParams>({
+  fetcher: GetOperLogList,
+  buildParams: buildQueryParams,
+});
 
 const handleSearch = () => {
-  pagination.page = 1;
-  getOperLogList();
+  return search();
 };
 
 const handleReset = () => {
   Object.assign(query, createDefaultQuery());
-  pagination.page = 1;
-  getOperLogList();
+  return search();
 };
 
 const handleDelete = (row: IOperLog) => {
-  dialog.warning({
-    title: "确认删除",
+  confirmDelete({
     content: "确定要删除该操作日志吗？",
-    positiveText: "确定",
-    negativeText: "取消",
-    onPositiveClick: async () => {
-      try {
-        await DeleteOperLog(row.id);
-        message.success("删除成功");
-        await getOperLogList();
-      } catch {
-        // 错误提示由响应拦截器处理
-      }
+    onDelete: async () => {
+      await DeleteOperLog(row.id);
     },
+    onSuccess: getOperLogList,
   });
 };
 
@@ -229,22 +204,22 @@ const handleClean = () => {
   });
 };
 
-const columnOptions = ref<PageColumnOption[]>([
-  { key: "title", title: "模块标题", visible: true },
-  { key: "operName", title: "操作人员", visible: true },
-  { key: "deptName", title: "部门", visible: true },
-  { key: "operUrl", title: "请求地址", visible: true },
-  { key: "operIp", title: "操作 IP", visible: true },
-  { key: "status", title: "操作状态", visible: true },
-  { key: "operTime", title: "操作时间", visible: true },
-  { key: "actions", title: "操作", visible: true, disabled: true },
-]);
+// 列显隐持久化到本地，刷新页面后仍保留用户上次选择。
+const { columnOptions, visibleKeys } = useColumnVisibility(
+  [
+    { key: "title", title: "模块标题", visible: true },
+    { key: "operName", title: "操作人员", visible: true },
+    { key: "deptName", title: "部门", visible: true },
+    { key: "operUrl", title: "请求地址", visible: true },
+    { key: "operIp", title: "操作 IP", visible: true },
+    { key: "status", title: "操作状态", visible: true },
+    { key: "operTime", title: "操作时间", visible: true },
+    { key: "actions", title: "操作", visible: true, disabled: true },
+  ],
+  "monitor:operation-log:columns",
+);
 
 const columns = computed<DataTableColumns<IOperLog>>(() => {
-  const visibleKeys = new Set(
-    columnOptions.value.filter((item) => item.visible).map((item) => item.key),
-  );
-
   return [
     {
       title: "序号",
@@ -257,7 +232,7 @@ const columns = computed<DataTableColumns<IOperLog>>(() => {
     ...createOperLogColumns({
       onDelete: handleDelete,
       onDetail: handleDetail,
-    }).filter((column) => "key" in column && column.key && visibleKeys.has(String(column.key))),
+    }).filter((column) => "key" in column && column.key && visibleKeys.value.has(String(column.key))),
   ];
 });
 

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="user-action w-64 overflow-hidden">
     <div class="flex items-center gap-3">
       <NAvatar round :src="UserAvatar" :size="44" class="shrink-0 shadow-sm" />
@@ -10,11 +10,6 @@
           {{ userInfo?.email || "未设置邮箱" }}
         </div>
       </div>
-    </div>
-
-    <div class="flex flex-wrap gap-1.5">
-      <NTag size="small" :bordered="false" type="info"> 角色信息展示 </NTag>
-      <NTag size="small" :bordered="false"> 部门信息展示 </NTag>
     </div>
 
     <div class="my-4 border-t border-black/6 dark:border-white/8" />
@@ -42,14 +37,14 @@
 </template>
 
 <script setup lang="ts">
-import { NAvatar, NIcon, NTag } from "naive-ui";
-import { LockClosed24Regular, Person24Regular, SignOut24Regular } from "@vicons/fluent";
 import { useUserStore } from "@/stores";
 import UserAvatar from "@/assets/images/Vue.png";
-import type { Component } from "vue";
+import SignOut24Regular from "@vicons/fluent/es/SignOut24Regular";
+import { NAvatar, NIcon } from "naive-ui";
 import { storeToRefs } from "pinia";
+import type { Component } from "vue";
 
-type UserActionKey = "profile" | "lock" | "logout";
+type UserActionKey = "logout";
 
 interface UserActionItem {
   key: UserActionKey;
@@ -63,19 +58,9 @@ const emit = defineEmits<{
 }>();
 
 const { userInfo } = storeToRefs(useUserStore());
-const { logout, lockScreen } = useUserStore();
+const { logout } = useUserStore();
 
 const actions: UserActionItem[] = [
-  {
-    key: "profile",
-    label: "个人信息",
-    icon: Person24Regular,
-  },
-  {
-    key: "lock",
-    label: "锁定屏幕",
-    icon: LockClosed24Regular,
-  },
   {
     key: "logout",
     label: "退出登录",
@@ -87,8 +72,6 @@ const actions: UserActionItem[] = [
 const handleAction = (key: UserActionKey) => {
   if (key === "logout") {
     logout();
-  } else if (key === "lock") {
-    lockScreen();
   }
   emit("select", key);
 };

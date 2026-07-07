@@ -35,3 +35,8 @@ export const CleanLoginLogs = () => {
 export const DeleteLoginLog = (id: number) => {
   return request.delete<string, null>(`/monitor/login-logs/${id}`);
 };
+
+export const getLoginLogList = GetLoginLogList;
+export const getLoginLogById = GetLoginLogById;
+export const cleanLoginLogs = CleanLoginLogs;
+export const deleteLoginLog = DeleteLoginLog;

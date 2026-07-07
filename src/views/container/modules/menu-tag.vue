@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div
     ref="scrollRef"
     class="scrollbar-none w-full max-w-full min-w-0 overflow-x-auto overflow-y-hidden border-t border-t-gray-300 pt-2 dark:border-t-gray-600"
@@ -59,18 +59,16 @@
 <script setup lang="ts">
 import { useMenuTagStore, type MenuTagItem } from "@/stores/menu-tag";
 import { getFluentIconComponent } from "@/utils";
-import { NIcon, NDropdown, NTag, useThemeVars, type TagProps } from "naive-ui";
-import {
-  BoardSplit24Regular,
-  ArrowCounterclockwise24Regular,
-  Dismiss24Regular,
-  Tag24Regular,
-  TagDismiss24Regular,
-  TextGrammarArrowLeft24Regular,
-  TextGrammarArrowRight24Regular,
-  TextGrammarDismiss24Regular,
-} from "@vicons/fluent";
+import ArrowCounterclockwise24Regular from "@vicons/fluent/es/ArrowCounterclockwise24Regular";
+import BoardSplit24Regular from "@vicons/fluent/es/BoardSplit24Regular";
+import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
+import Tag24Regular from "@vicons/fluent/es/Tag24Regular";
+import TagDismiss24Regular from "@vicons/fluent/es/TagDismiss24Regular";
+import TextGrammarArrowLeft24Regular from "@vicons/fluent/es/TextGrammarArrowLeft24Regular";
+import TextGrammarArrowRight24Regular from "@vicons/fluent/es/TextGrammarArrowRight24Regular";
+import TextGrammarDismiss24Regular from "@vicons/fluent/es/TextGrammarDismiss24Regular";
 import { AnimatePresence, LayoutGroup, motion } from "motion-v";
+import { NDropdown, NIcon, NTag, useThemeVars, type TagProps } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { computed, h, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useRouter } from "vue-router";

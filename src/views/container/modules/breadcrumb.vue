@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <NBreadcrumb class="min-w-0 mt-1">
     <NBreadcrumbItem
       v-for="(item, index) in breadcrumbItems"

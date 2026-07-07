@@ -2,11 +2,7 @@
   <div class="p-6">
     <h2 class="text-xl font-semibold mb-6">工作台</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-      <div
-        v-for="card in statCards"
-        :key="card.title"
-        class="rounded-lg border p-4 bg-white dark:bg-neutral-900"
-      >
+      <div v-for="card in statCards" :key="card.title" class="rounded-lg border p-4 bg-white dark:bg-neutral-900">
         <div class="text-sm text-gray-500 mb-2">{{ card.title }}</div>
         <div class="text-2xl font-bold">{{ card.value }}</div>
       </div>

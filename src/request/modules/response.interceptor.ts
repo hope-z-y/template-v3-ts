@@ -7,6 +7,7 @@ import { SUCCESS_CODE } from "../types";
 import { fetchRefreshToken } from "./refresh-token";
 
 const { message } = createDiscreteApi(["message"]);
+const UNAUTHORIZED_CODE = 401;
 
 let isRefreshing = false;
 let pendingQueue: Array<{
@@ -39,7 +40,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
 };
 
 const clearAuthAndRedirect = () => {
-  useUserStore().clearAuth();
+  useUserStore().resetSession();
 
   const currentPath = router.currentRoute.value.fullPath;
 
@@ -77,8 +78,9 @@ const handleUnauthorized = async (
   instance: AxiosInstance,
   error: AxiosError<ApiResponse>,
   originalRequest: InternalAxiosRequestConfig,
+  fallbackMessage?: string,
 ) => {
-  const businessMessage = error.response?.data?.message;
+  const businessMessage = fallbackMessage || error.response?.data?.message;
   const userStore = useUserStore();
 
   if (isSkipRefreshPath(originalRequest.url) || originalRequest._retry) {
@@ -93,6 +95,8 @@ const handleUnauthorized = async (
     return Promise.reject(error);
   }
 
+  originalRequest._retry = true;
+
   if (isRefreshing) {
     return new Promise((resolve, reject) => {
       pendingQueue.push({
@@ -104,7 +108,6 @@ const handleUnauthorized = async (
     });
   }
 
-  originalRequest._retry = true;
   isRefreshing = true;
 
   try {
@@ -129,6 +132,15 @@ export const setupResponseInterceptor = (instance: AxiosInstance) => {
 
       if (!isApiResponse(payload)) {
         return payload;
+      }
+
+      if (payload.code === UNAUTHORIZED_CODE) {
+        return handleUnauthorized(
+          instance,
+          new Error(payload.message || getHttpErrorMessage(401)) as AxiosError<ApiResponse>,
+          response.config,
+          payload.message,
+        );
       }
 
       if (payload.code !== SUCCESS_CODE) {

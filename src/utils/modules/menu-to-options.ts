@@ -1,4 +1,5 @@
 import type { IMenu } from "@/api/types";
+import { getBuiltinRoutePath } from "./menu-route-contract";
 import { isNumericTrue } from "./number-boolean";
 
 /** 侧边栏菜单项（与 Naive UI MenuOption 结构兼容） */
@@ -8,6 +9,7 @@ export type RouteMenuOption = {
   iconName?: string;
   navigable?: boolean;
   href?: string;
+  permission?: string;
   children?: RouteMenuOption[];
 };
 
@@ -71,6 +73,14 @@ export const resolveMenuNavPath = (path: string | null | undefined, parentPath =
   return base ? `${base}/${raw}` : `/${raw}`;
 };
 
+/**
+ * 菜单最终导航路径。
+ * 已知内置模块优先使用模板标准 URL，避免后端 path 未迁移时出现点击 404。
+ */
+export const resolveMenuRoutePath = (menu: IMenu, parentPath = ""): string => {
+  return getBuiltinRoutePath(menu) ?? resolveMenuNavPath(menu.path, parentPath);
+};
+
 /** 是否应在侧边栏展示（目录/菜单、visible=1、status=1） */
 export const isSidebarMenuNode = (menu: IMenu) => {
   const type = getMenuType(menu);
@@ -91,7 +101,7 @@ export const menusToOptions = (menus: IMenu[], parentPath = ""): RouteMenuOption
     if (!isSidebarMenuNode(menu)) return;
 
     const type = getMenuType(menu);
-    const fullPath = resolveMenuNavPath(menu.path, parentPath);
+    const fullPath = resolveMenuRoutePath(menu, parentPath);
     const childParentPath = isExternalPath(fullPath) ? parentPath : fullPath;
     const children = menu.children?.length ? menusToOptions(menu.children, childParentPath) : undefined;
 
@@ -105,6 +115,7 @@ export const menusToOptions = (menus: IMenu[], parentPath = ""): RouteMenuOption
       label: menu.menuName,
       key: external ? `external-${menu.id}` : fullPath || `menu-${menu.id}`,
       iconName: menu.icon ?? undefined,
+      permission: menu.permission ?? undefined,
       navigable: type === "C" || external || (type === "M" && Boolean(menu.path?.trim())),
     };
 
@@ -153,10 +164,7 @@ export const buildMenuIconMap = (options: RouteMenuOption[]): Record<string, str
 };
 
 /** 在菜单树中按 path 查找菜单项 */
-export const findMenuOptionByKey = (
-  options: RouteMenuOption[],
-  key: string,
-): RouteMenuOption | undefined => {
+export const findMenuOptionByKey = (options: RouteMenuOption[], key: string): RouteMenuOption | undefined => {
   for (const option of options) {
     if (option.key === key) return option;
     if (option.children?.length) {
@@ -166,3 +174,26 @@ export const findMenuOptionByKey = (
   }
   return undefined;
 };
+
+/** 收集菜单树中的按钮权限标识，供显式信任菜单权限时作为补充来源。 */
+export const collectMenuButtonPermissions = (menus: IMenu[]): string[] => {
+  const permissions = new Set<string>();
+
+  const walk = (items: IMenu[]) => {
+    items.forEach((item) => {
+      const permission = item.permission?.trim();
+      if (getMenuType(item) === "F" && permission) {
+        permissions.add(permission);
+      }
+      if (item.children?.length) {
+        walk(item.children);
+      }
+    });
+  };
+
+  walk(menus);
+  return Array.from(permissions);
+};
+
+/** @deprecated 请使用 collectMenuButtonPermissions，避免误把页面菜单权限当成按钮授权。 */
+export const collectMenuPermissions = collectMenuButtonPermissions;

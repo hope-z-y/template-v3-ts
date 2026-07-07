@@ -4,6 +4,7 @@ import { registerDynamicRoutes, resetDynamicRoutes } from "@/router/modules/dyna
 import { STORE_KEY } from "@/utils/modules/store-key";
 import {
   buildMenuIconMap,
+  collectMenuButtonPermissions,
   ensureHomeMenuOption,
   menusToOptions,
   normalizeMenuTree,
@@ -22,11 +23,33 @@ export const useMenuStore = defineStore(STORE_KEY.MenuStore, () => {
 
   let pendingInit: Promise<void> | null = null;
 
+  const collectNavigablePaths = (items: RouteMenuOption[]): string[] => {
+    const paths: string[] = [];
+
+    const walk = (options: RouteMenuOption[]) => {
+      options.forEach((item) => {
+        if (item.navigable && !item.href && item.key.startsWith("/")) {
+          paths.push(item.key);
+        }
+        if (item.children?.length) {
+          walk(item.children);
+        }
+      });
+    };
+
+    walk(items);
+    return paths;
+  };
+
   const applyMenuTree = (tree: IMenu[]) => {
     menuTree.value = tree;
     const options = ensureHomeMenuOption(menusToOptions(tree));
     menus.value = options;
     iconByPath.value = buildMenuIconMap(options);
+
+    import("@/stores/menu-tag").then(({ useMenuTagStore }) => {
+      useMenuTagStore().filterByPaths(collectNavigablePaths(options));
+    });
   };
 
   const fetchMenus = async (force = false) => {
@@ -38,9 +61,16 @@ export const useMenuStore = defineStore(STORE_KEY.MenuStore, () => {
       try {
         loading.value = true;
         const data = await GetUserMenus();
-        applyMenuTree(normalizeMenuTree(data));
-      } catch {
+        const tree = normalizeMenuTree(data);
+        applyMenuTree(tree);
+
+        const { useUserStore } = await import("@/stores/user");
+        useUserStore().setMenuPermissions(collectMenuButtonPermissions(tree));
+      } catch (error) {
         applyMenuTree([]);
+        const { useUserStore } = await import("@/stores/user");
+        useUserStore().setMenuPermissions([]);
+        throw error;
       } finally {
         loading.value = false;
         pendingInit = null;
@@ -69,6 +99,9 @@ export const useMenuStore = defineStore(STORE_KEY.MenuStore, () => {
     menuTree.value = [];
     menus.value = [];
     iconByPath.value = {};
+    import("@/stores/user").then(({ useUserStore }) => {
+      useUserStore().setMenuPermissions([]);
+    });
     routesReady.value = false;
     pendingInit = null;
 

@@ -1,10 +1,13 @@
 import type { IMenu } from "@/api/types";
 import type { RouteRecordRaw } from "vue-router";
-import { getMenuType, isSidebarMenuNode, resolveMenuNavPath } from "./menu-to-options";
+import { getMenuType, isSidebarMenuNode, resolveMenuRoutePath } from "./menu-to-options";
 import { isNumericTrue } from "./number-boolean";
 
 /** Vite 预扫描的视图模块，用于将后端 component 字段映射为懒加载组件 */
 const viewModules = import.meta.glob("@/views/**/*.vue");
+
+/** 菜单组件缺失时的兜底页面 */
+const notFoundComponent = () => import("@/views/exception/404.vue");
 
 /** 容器路由名称，动态路由挂载在其 children 下 */
 export const CONTAINER_ROUTE_NAME = "Container";
@@ -40,18 +43,19 @@ const pathToRouteName = (fullPath: string, menuId: number) => {
 
 /** 解析后端 component 字段为 Vue 组件懒加载函数 */
 export const resolveViewComponent = (component?: string | null) => {
-  if (!component?.trim()) return undefined;
+  if (!component?.trim()) return notFoundComponent;
 
-  const normalized = component.trim().replace(/^\/+/, "").replace(/\.vue$/i, "");
+  const normalized = component
+    .trim()
+    .replace(/^\/+/, "")
+    .replace(/\.vue$/i, "");
   const targetSuffix = `/views/${normalized}.vue`.replace(/\\/g, "/");
 
-  const matchedKey = Object.keys(viewModules).find((key) =>
-    key.replace(/\\/g, "/").endsWith(targetSuffix),
-  );
+  const matchedKey = Object.keys(viewModules).find((key) => key.replace(/\\/g, "/").endsWith(targetSuffix));
 
   if (!matchedKey) {
     console.warn(`[router] 未找到视图组件: views/${normalized}.vue`);
-    return undefined;
+    return notFoundComponent;
   }
 
   return viewModules[matchedKey];
@@ -128,7 +132,7 @@ export const menusToRoutes = (menus: IMenu[], parentPath = ""): RouteRecordRaw[]
 
   menus.forEach((menu) => {
     const type = getMenuType(menu);
-    const fullPath = resolveMenuNavPath(menu.path, parentPath);
+    const fullPath = resolveMenuRoutePath(menu, parentPath);
 
     if (!isRouteMenuNode(menu, fullPath)) return;
 
@@ -136,20 +140,32 @@ export const menusToRoutes = (menus: IMenu[], parentPath = ""): RouteRecordRaw[]
     const childRoutes = menu.children?.length ? menusToRoutes(menu.children, childParentPath) : undefined;
     const routePath = toRouteSegment(fullPath, parentPath);
 
-    const route = {
-      path: routePath,
-      name: pathToRouteName(fullPath, menu.id),
-      meta: {
-        title: menu.menuName,
-        icon: menu.icon ?? undefined,
-        keepAlive: isNumericTrue(menu.isCache),
-        menuId: menu.id,
-        permission: menu.permission ?? undefined,
-      },
-    } as unknown as RouteRecordRaw;
+    const routeMeta = {
+      title: menu.menuName,
+      icon: menu.icon ?? undefined,
+      keepAlive: isNumericTrue(menu.isCache),
+      menuId: menu.id,
+      permission: menu.permission ?? undefined,
+    };
+
+    const route: RouteRecordRaw =
+      type === "C"
+        ? {
+            path: routePath,
+            name: pathToRouteName(fullPath, menu.id),
+            component: resolveViewComponent(menu.component),
+            children: childRoutes ?? [],
+            meta: routeMeta,
+          }
+        : {
+            path: routePath,
+            name: pathToRouteName(fullPath, menu.id),
+            component: null,
+            children: childRoutes ?? [],
+            meta: routeMeta,
+          };
 
     if (type === "C") {
-      route.component = resolveViewComponent(menu.component);
       const query = parseRouteQuery(menu.query);
       if (query) {
         route.props = query;
@@ -157,7 +173,6 @@ export const menusToRoutes = (menus: IMenu[], parentPath = ""): RouteRecordRaw[]
     }
 
     if (childRoutes?.length) {
-      route.children = childRoutes;
       const redirectPath = findFirstNavigablePath(childRoutes, fullPath);
       if (redirectPath) {
         route.redirect = redirectPath;

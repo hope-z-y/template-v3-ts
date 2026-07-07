@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="relative w-full max-w-md" @click="openSearch">
     <NInput readonly placeholder="搜索菜单..." class="cursor-pointer">
       <template #prefix>
@@ -45,9 +45,7 @@
             :style="modalStyle"
             @click.stop
           >
-            <div
-              class="flex items-center gap-3 border-b border-black/6 px-4 py-3 dark:border-white/8"
-            >
+            <div class="flex items-center gap-3 border-b border-black/6 px-4 py-3 dark:border-white/8">
               <NIcon :size="20" class="shrink-0 text-black/45 dark:text-white/45">
                 <Search24Regular />
               </NIcon>
@@ -78,9 +76,7 @@
 
             <div class="max-h-[min(50vh,360px)] overflow-y-auto p-2">
               <template v-if="!keyword.trim()">
-                <div class="px-3 py-8 text-center text-sm text-black/40 dark:text-white/40">
-                  输入关键词搜索菜单
-                </div>
+                <div class="px-3 py-8 text-center text-sm text-black/40 dark:text-white/40">输入关键词搜索菜单</div>
               </template>
 
               <template v-else-if="filteredItems.length === 0">
@@ -140,7 +136,8 @@
 </template>
 
 <script setup lang="ts">
-import { Dismiss24Regular, Search24Regular } from "@vicons/fluent";
+import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
+import Search24Regular from "@vicons/fluent/es/Search24Regular";
 import { useEventListener, useScrollLock } from "@vueuse/core";
 import { NIcon, NInput, useThemeVars } from "naive-ui";
 import { computed, nextTick, ref, watch } from "vue";
@@ -158,10 +155,7 @@ const props = withDefaults(
     items?: MenuSearchItem[];
   }>(),
   {
-    items: () => [
-      { id: "home", label: "首页", path: "/home", keywords: ["home", "index"] },
-      { id: "user", label: "用户管理", path: "/user", keywords: ["user", "manage"] },
-    ],
+    items: () => [],
   },
 );
 

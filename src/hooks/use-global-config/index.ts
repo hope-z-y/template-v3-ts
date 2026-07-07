@@ -14,6 +14,11 @@ const _getLocalConfig = (): IGlobalConfig => {
     return defaultConfig;
   }
 };
+
+const setLocalConfig = () => {
+  localStorage.setItem("template-v3-ts:config", JSON.stringify(globalConfig));
+};
+
 // 全局只维护一份状态（singleton）
 const globalConfig = reactive<IGlobalConfig>({ ..._getLocalConfig() });
 
@@ -23,27 +28,30 @@ const useGlobalConfig = (): ToRefs<IGlobalConfig> & {
 } => {
   const toggleTheme = (e: Event) => {
     const mouseEvent = e as MouseEvent;
-    // 获取到 transition API 实例
-    const transition = document.startViewTransition(() => {
+
+    const applyTheme = () => {
       globalConfig.theme = globalConfig.theme === "dark" ? "light" : "dark";
+      setLocalConfig();
 
       if (globalConfig.theme === "dark") {
         document.documentElement.classList.add("dark");
       } else {
         document.documentElement.classList.remove("dark");
       }
-    });
+    };
+
+    if (!document.startViewTransition) {
+      applyTheme();
+      return;
+    }
+
+    // 获取到 transition API 实例
+    const transition = document.startViewTransition(applyTheme);
 
     transition.ready.then(() => {
       const { clientX, clientY } = mouseEvent;
-      const radius = Math.hypot(
-        Math.max(clientX, innerWidth - clientX),
-        Math.max(clientY, innerHeight - clientY),
-      );
-      const clipPath = [
-        `circle(0% at ${clientX}px ${clientY}px)`,
-        `circle(${radius}px at ${clientX}px ${clientY}px)`,
-      ];
+      const radius = Math.hypot(Math.max(clientX, innerWidth - clientX), Math.max(clientY, innerHeight - clientY));
+      const clipPath = [`circle(0% at ${clientX}px ${clientY}px)`, `circle(${radius}px at ${clientX}px ${clientY}px)`];
 
       // 自定义动画
       document.documentElement.animate(
@@ -62,6 +70,7 @@ const useGlobalConfig = (): ToRefs<IGlobalConfig> & {
 
   const toggleCollapse = () => {
     globalConfig.collapse = !globalConfig.collapse;
+    setLocalConfig();
   };
 
   return { toggleTheme, toggleCollapse, ...toRefs(globalConfig) };

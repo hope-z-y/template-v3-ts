@@ -6,6 +6,7 @@ import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import { bootstrap } from "./bootstrap";
 /** 路由 */
 import { router } from "./router";
+import { setupDirectives } from "./directives";
 /** 全局样式 */
 import "@/styles/common.css";
 /** 滚动条样式 */
@@ -24,6 +25,7 @@ const setup = async () => {
   const app = createApp(App);
   app.use(pinia);
   app.use(router);
+  setupDirectives(app);
   app.mount("#app");
 };
 

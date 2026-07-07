@@ -8,4 +8,8 @@ export const STORE_KEY = {
   MenuTagDataCache: "MenuTagDataCache",
   /** 侧边栏菜单仓库 */
   MenuStore: "MenuStore",
+  /** 兼容模式 access token */
+  AuthAccessToken: "template-v3-ts:auth:access-token",
+  /** 当前会话 refresh token */
+  AuthRefreshToken: "template-v3-ts:auth:refresh-token",
 };

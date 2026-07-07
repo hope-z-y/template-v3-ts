@@ -1,6 +1,11 @@
+import ArrowSync24Regular from "@vicons/fluent/es/ArrowSync24Regular";
+import Grid24Regular from "@vicons/fluent/es/Grid24Regular";
+import Search24Regular from "@vicons/fluent/es/Search24Regular";
+import { NButton, NCheckbox, NFlex, NIcon, NPopover, NScrollbar, NTooltip } from "naive-ui";
 import {
   computed,
   defineComponent,
+  getCurrentInstance,
   nextTick,
   onMounted,
   onUnmounted,
@@ -10,8 +15,6 @@ import {
   type PropType,
   type SlotsType,
 } from "vue";
-import { NButton, NCheckbox, NFlex, NIcon, NPopover, NScrollbar, NTooltip } from "naive-ui";
-import { ArrowSync24Regular, Grid24Regular, Search24Regular } from "@vicons/fluent";
 
 export interface PageColumnOption {
   key: string;
@@ -50,6 +53,7 @@ const Page = defineComponent({
     footer?: () => unknown;
   }>,
   setup(props, { slots, emit }) {
+    const instance = getCurrentInstance();
     const container = useTemplateRef<HTMLDivElement>("container");
     const maxHeight = ref(0);
     const columnPopoverVisible = ref(false);
@@ -103,11 +107,16 @@ const Page = defineComponent({
 
       refreshing.value = true;
       try {
-        emit("refresh");
+        const handler = instance?.vnode.props?.onRefresh;
+        if (Array.isArray(handler)) {
+          await Promise.all(handler.map((item) => item()));
+        } else if (typeof handler === "function") {
+          await handler();
+        } else {
+          emit("refresh");
+        }
       } finally {
-        window.setTimeout(() => {
-          refreshing.value = false;
-        }, 300);
+        refreshing.value = false;
       }
     };
 

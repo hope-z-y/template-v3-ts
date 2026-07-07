@@ -61,3 +61,10 @@ export const UpdateDept = (id: number, data: IUpdateDeptParams) => {
 export const DeleteDept = (id: number) => {
   return request.delete<string, null>(`/system/depts/${id}`);
 };
+
+export const getDeptList = GetDeptList;
+export const getDeptTree = GetDeptTree;
+export const getDeptById = GetDeptById;
+export const createDept = CreateDept;
+export const updateDept = UpdateDept;
+export const deleteDept = DeleteDept;

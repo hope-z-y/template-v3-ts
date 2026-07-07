@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="grid grid-rows-[auto_1fr] h-full">
     <NGradientText type="success" class="m-0 shrink-0 text-xl font-bold! text-center py-2">
       {{ appName }}
@@ -45,7 +45,10 @@ const handleMenuUpdate = (key: string) => {
   if (!option?.navigable) return;
 
   if ("href" in option && option.href) {
-    window.open(String(option.href), "_blank");
+    const opened = window.open(String(option.href), "_blank", "noopener,noreferrer");
+    if (opened) {
+      opened.opener = null;
+    }
     return;
   }
 

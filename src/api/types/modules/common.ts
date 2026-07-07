@@ -1,26 +1,32 @@
 /** 接口统一返回响应格式 */
-export interface IResponse<T = undefined> {
-  /** 状态码 */
+export interface ApiResponse<T = unknown> {
+  /** 业务状态码，通常 200 表示成功 */
   code: number;
-  /**提示信息 */
-  msg: string;
-  /** 返回数据集 */
-  data?: T;
+  /** 后端返回的提示信息 */
+  message: string;
+  /** 业务数据 */
+  data: T;
 }
 
-/** 分页返回数据集 */
+/**
+ * @deprecated 请使用 ApiResponse<T>。
+ * 保留 IResponse 是为了兼容历史代码，新增代码不要继续扩散旧命名。
+ */
+export type IResponse<T = unknown> = ApiResponse<T>;
+
+/** 分页返回数据 */
 export interface IPaginationData<T> {
   /** 总数 */
   total: number;
-  /** 数据集 */
+  /** 当前页数据 */
   rows: T[];
 }
 
-/** 分页基础类型 */
+/** 分页基础参数 */
 export interface IPagination {
-  /** 页数 */
+  /** 当前页码 */
   pageNum: number;
-  /** 页码 */
+  /** 每页条数 */
   pageSize: number;
 }
 

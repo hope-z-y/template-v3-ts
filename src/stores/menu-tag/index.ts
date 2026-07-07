@@ -239,6 +239,12 @@ export const useMenuTagStore = defineStore(
       viewKeys.value[path] = (viewKeys.value[path] ?? 0) + 1;
     };
 
+    /** 按当前可访问菜单路径过滤已恢复的标签，避免切换用户后残留无权限页签 */
+    const filterByPaths = (paths: string[]) => {
+      const allowed = new Set([HOME_PATH, ...paths]);
+      tags.value = normalizeTags(tags.value.filter((item) => allowed.has(item.path)));
+    };
+
     /**
      * 获取 RouterView 的 key，用于触发页面刷新。
      * @param path 当前路由路径
@@ -268,6 +274,7 @@ export const useMenuTagStore = defineStore(
       closeCurrent,
       toggleAffix,
       refreshTag,
+      filterByPaths,
       getViewKey,
       isActive,
       reset,

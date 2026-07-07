@@ -7,6 +7,7 @@ import type {
   IRefreshTokenResponse,
   ISignInParams,
   ISignInResponse,
+  IUserProfile,
 } from "../types";
 
 /**
@@ -28,7 +29,7 @@ export const SignOut = () => {
 
 /**
  * 获取图形验证码
- * @returns 验证码开关状态；开启时附带 captchaKey 与 SVG 图片
+ * @returns 验证码开关状态；开启时附带 captchaKey 与验证码图片
  */
 export const GetCaptchaCode = () => {
   return request.get<string, ICaptchaResponse>("/auth/captcha");
@@ -58,3 +59,20 @@ export const RefreshToken = (data: IRefreshTokenParams) => {
 export const GetUserMenus = () => {
   return request.get<string, IGetUserMenusResponse>("/auth/menus");
 };
+
+/**
+ * 获取当前登录用户信息、角色与权限标识
+ * @returns 当前用户权限上下文
+ */
+export const GetCurrentUser = () => {
+  return request.get<string, IUserProfile>("/auth/profile");
+};
+
+/** camelCase API aliases for new modules */
+export const signIn = SignIn;
+export const signOut = SignOut;
+export const getCaptchaCode = GetCaptchaCode;
+export const getPublicEncryptKey = GetPublicEncryptKey;
+export const refreshToken = RefreshToken;
+export const getUserMenus = GetUserMenus;
+export const getCurrentUser = GetCurrentUser;

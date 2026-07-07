@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { RouterView } from "vue-router";
-import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme, zhCN, dateZhCN, type GlobalTheme } from "naive-ui";
+import {
+  NConfigProvider,
+  NMessageProvider,
+  NDialogProvider,
+  darkTheme,
+  zhCN,
+  dateZhCN,
+  type GlobalTheme,
+} from "naive-ui";
 import { computed } from "vue";
 import { useGlobalConfig } from "@/hooks";
 

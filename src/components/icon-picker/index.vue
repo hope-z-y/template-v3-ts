@@ -1,4 +1,4 @@
-<!-- Fluent 24 Regular 图标选择器 -->
+﻿<!-- Fluent 24 Regular 图标选择器 -->
 
 <template>
   <NPopover
@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import { getFluentIconComponent, MENU_FLUENT_ICON_NAMES } from "@/utils/modules/fluent-icon";
-import { Dismiss24Regular } from "@vicons/fluent";
+import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
 import { NButton, NIcon, NInput, NPopover, NScrollbar, NTooltip } from "naive-ui";
 import { computed, ref } from "vue";
 

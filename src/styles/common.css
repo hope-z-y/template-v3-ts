@@ -28,8 +28,16 @@ html {
   z-index: 2147483646;
 }
 
-
-
 .search-form .n-form-item-feedback-wrapper {
   display: none;
+}
+
+.search-form-fields {
+  grid-template-columns: repeat(var(--search-form-columns), minmax(0, 1fr));
+}
+
+@media (max-width: 768px) {
+  .search-form-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

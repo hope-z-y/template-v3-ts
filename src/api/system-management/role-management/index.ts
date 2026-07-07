@@ -1,11 +1,5 @@
 import { request } from "@/request";
-import type {
-  ICreateRoleParams,
-  IGetRoleListResponse,
-  IQueryRoleParams,
-  IRole,
-  IUpdateRoleParams,
-} from "../../types";
+import type { ICreateRoleParams, IGetRoleListResponse, IQueryRoleParams, IRole, IUpdateRoleParams } from "../../types";
 
 /**
  * 分页查询角色列表
@@ -52,3 +46,9 @@ export const UpdateRole = (id: number, data: IUpdateRoleParams) => {
 export const DeleteRole = (id: number) => {
   return request.delete<string, null>(`/system/roles/${id}`);
 };
+
+export const getRoleList = GetRoleList;
+export const getRoleById = GetRoleById;
+export const createRole = CreateRole;
+export const updateRole = UpdateRole;
+export const deleteRole = DeleteRole;

@@ -6,34 +6,54 @@
     >
       <h1 class="m-0 mb-2 text-center text-[22px] font-semibold text-black/88 dark:text-white/90">登录</h1>
 
-      <NInput v-model:value="form.account" placeholder="请输入用户名" size="large" @keyup.enter="signIn" />
+      <NForm ref="formRef" :model="form" :rules="rules" :show-label="false" class="flex flex-col gap-1">
+        <NFormItem path="account">
+          <NInput
+            v-model:value="form.account"
+            placeholder="请输入用户名"
+            size="large"
+            clearable
+            @keyup.enter="signIn"
+          />
+        </NFormItem>
 
-      <NInput
-        v-model:value="form.password"
-        type="password"
-        show-password-on="click"
-        placeholder="请输入密码"
+        <NFormItem path="password">
+          <NInput
+            v-model:value="form.password"
+            type="password"
+            show-password-on="click"
+            placeholder="请输入密码"
+            size="large"
+            clearable
+            @keyup.enter="signIn"
+          />
+        </NFormItem>
+
+        <NFormItem v-if="captcha.enabled" path="code">
+          <div class="flex w-full items-center gap-3">
+            <NInput
+              v-model:value="form.code"
+              class="flex-1"
+              placeholder="请输入验证码"
+              size="large"
+              clearable
+              @keyup.enter="signIn"
+            />
+            <SafeCaptcha :img="captcha.img" :loading="captchaLoading" @refresh="getCaptchaCode" />
+          </div>
+        </NFormItem>
+      </NForm>
+
+      <NButton
+        type="primary"
         size="large"
-        @keyup.enter="signIn"
-      />
-
-      <div v-if="captcha.enabled" class="flex items-center gap-3">
-        <NInput
-          v-model:value="form.code"
-          class="flex-1"
-          placeholder="请输入验证码"
-          size="large"
-          @keyup.enter="signIn"
-        />
-        <div
-          class="captcha-img flex h-10 w-[120px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded border border-black/8 bg-black/3 dark:border-white/10 dark:bg-white/5"
-          title="点击刷新验证码"
-          @click="getCaptchaCode"
-          v-html="captcha.img"
-        />
-      </div>
-
-      <NButton type="primary" size="large" block :disabled="submitting" @click="signIn"> 登录 </NButton>
+        block
+        :loading="submitting || publicKeyLoading"
+        :disabled="submitting || publicKeyLoading"
+        @click="signIn"
+      >
+        登录
+      </NButton>
     </div>
   </div>
 </template>
@@ -41,11 +61,12 @@
 <script setup lang="ts">
 import { GetCaptchaCode, GetPublicEncryptKey, SignIn } from "@/api/auth";
 import type { ICaptchaResponse, ISignInParams } from "@/api/types";
+import { SafeCaptcha } from "@/components";
 import { useLoading } from "@/hooks";
 import { useMenuStore, useUserStore } from "@/stores";
 import { Encrypt } from "@/utils";
-import { NButton, NInput, useMessage } from "naive-ui";
-import { ref } from "vue";
+import { NButton, NForm, NFormItem, NInput, useMessage, type FormInst, type FormRules } from "naive-ui";
+import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const message = useMessage();
@@ -56,17 +77,72 @@ const menuStore = useMenuStore();
 
 const { start, stop } = useLoading("#app");
 
-//#region 登录
+// #region 登录表单
+interface LoginForm {
+  account: string;
+  password: string;
+  code: string;
+}
 
+const formRef = ref<FormInst | null>(null);
 const submitting = ref(false);
-
-const form = ref({
+const form = ref<LoginForm>({
   account: "",
   password: "",
   code: "",
 });
 
+const requiredTrimRule = (messageText: string) => ({
+  validator: (_rule: unknown, value: string) => Boolean(value?.trim()),
+  message: messageText,
+  trigger: ["input", "blur"],
+});
+
+// 验证码关闭时不校验 code，避免隐藏字段阻塞登录。
+const rules = computed<FormRules>(() => ({
+  account: [requiredTrimRule("请输入用户名")],
+  password: [requiredTrimRule("请输入密码")],
+  code: captcha.value.enabled ? [requiredTrimRule("请输入验证码")] : [],
+}));
+
+const validateForm = async () => {
+  try {
+    await formRef.value?.validate();
+    return true;
+  } catch {
+    return false;
+  }
+};
+// #endregion
+
+// #region 登录流程
+const resolveRedirectPath = () => {
+  const redirect = route.query.redirect;
+
+  // 只允许站内路径回跳，避免把外部 URL 当成登录后跳转地址。
+  if (typeof redirect === "string" && redirect.startsWith("/") && !redirect.startsWith("//")) {
+    return redirect;
+  }
+
+  return "/home";
+};
+
 const signIn = async () => {
+  if (submitting.value || publicKeyLoading.value) return;
+  if (!(await validateForm())) return;
+
+  if (!publicKey.value) {
+    message.warning("登录公钥未加载完成，请稍后重试");
+    await getPublicKey();
+    return;
+  }
+
+  if (captcha.value.enabled && !captcha.value.captchaKey) {
+    message.warning("验证码未加载完成，请刷新后重试");
+    await getCaptchaCode();
+    return;
+  }
+
   try {
     submitting.value = true;
     start();
@@ -90,21 +166,24 @@ const signIn = async () => {
     const result = await SignIn(data);
     userStore.setTokens(result);
     menuStore.reset();
+    await Promise.all([userStore.loadProfile(true), menuStore.initRoutes(true)]);
     message.success("登录成功");
 
-    const redirect = route.query.redirect;
-    await router.replace(typeof redirect === "string" && redirect ? redirect : "/home");
+    await router.replace(resolveRedirectPath());
   } catch {
-    form.value.code = "";
-    getCaptchaCode();
+    if (captcha.value.enabled) {
+      form.value.code = "";
+      await getCaptchaCode();
+    }
   } finally {
     submitting.value = false;
     stop();
   }
 };
-//#endregion
+// #endregion
 
-// #region 获取验证码
+// #region 验证码
+const captchaLoading = ref(false);
 const captcha = ref<ICaptchaResponse>({
   enabled: true,
   captchaKey: "",
@@ -112,39 +191,43 @@ const captcha = ref<ICaptchaResponse>({
 });
 
 const getCaptchaCode = async () => {
+  if (captchaLoading.value) return;
+
   try {
-    const data = await GetCaptchaCode();
-    captcha.value = data;
-    if (!data.enabled) {
+    captchaLoading.value = true;
+    captcha.value = await GetCaptchaCode();
+    if (!captcha.value.enabled) {
       form.value.code = "";
     }
   } catch {
-    // 错误提示由响应拦截器处理
+    // 错误提示由响应拦截器处理。
+  } finally {
+    captchaLoading.value = false;
   }
 };
 
-getCaptchaCode();
+void getCaptchaCode();
 // #endregion
 
-//#region  获取公钥
+// #region 登录公钥
 const publicKey = ref("");
+const publicKeyLoading = ref(false);
 
 const getPublicKey = async () => {
   try {
+    publicKeyLoading.value = true;
     const data = await GetPublicEncryptKey();
     publicKey.value = data.publicKey;
   } catch {
-    // 错误提示由响应拦截器处理
+    publicKey.value = "";
+    // 错误提示由响应拦截器处理。
+  } finally {
+    publicKeyLoading.value = false;
   }
 };
 
-getPublicKey();
+void getPublicKey();
 // #endregion
 </script>
 
-<style scoped>
-.captcha-img :deep(svg) {
-  height: 100%;
-  width: 100%;
-}
-</style>
+<style scoped></style>

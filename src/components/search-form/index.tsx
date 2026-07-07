@@ -1,4 +1,7 @@
-import { ArrowReset24Regular, ChevronDown24Regular, ChevronUp24Regular, Search24Regular } from "@vicons/fluent";
+﻿import ArrowReset24Regular from "@vicons/fluent/es/ArrowReset24Regular";
+import ChevronDown24Regular from "@vicons/fluent/es/ChevronDown24Regular";
+import ChevronUp24Regular from "@vicons/fluent/es/ChevronUp24Regular";
+import Search24Regular from "@vicons/fluent/es/Search24Regular";
 import { NButton, NForm, NIcon } from "naive-ui";
 import { Comment, Fragment, Text, computed, defineComponent, ref, type VNode } from "vue";
 
@@ -56,8 +59,8 @@ export default defineComponent({
           <div class="flex w-full items-start gap-2">
             {/* 左侧：仅放表单项，按 columns 列网格换行 */}
             <div
-              class="min-w-0 flex-1 grid items-start gap-2"
-              style={{ gridTemplateColumns: `repeat(${props.columns}, minmax(0, 1fr))` }}
+              class="search-form-fields min-w-0 flex-1 grid items-start gap-2"
+              style={{ "--search-form-columns": props.columns }}
             >
               {fields.value.map((field, index) => (
                 <div v-show={isFieldVisible(index)} class="min-w-0" key={index}>
@@ -83,9 +86,7 @@ export default defineComponent({
               {needCollapse.value && (
                 <NButton text type="primary" onClick={() => (expanded.value = !expanded.value)}>
                   {{
-                    icon: () => (
-                      <NIcon>{expanded.value ? <ChevronUp24Regular /> : <ChevronDown24Regular />}</NIcon>
-                    ),
+                    icon: () => <NIcon>{expanded.value ? <ChevronUp24Regular /> : <ChevronDown24Regular />}</NIcon>,
                     default: () => (expanded.value ? "折叠" : "展开"),
                   }}
                 </NButton>

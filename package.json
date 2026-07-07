@@ -3,13 +3,18 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@10.30.3",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "pnpm typecheck && vite build",
     "preview": "vite preview",
     "format": "prettier --write . && eslint . --fix",
     "lint": "eslint .",
-    "lint:check": "prettier --check . && eslint ."
+    "lint:check": "prettier --check . && eslint .",
+    "typecheck": "vue-tsc -b",
+    "check": "prettier --check . && eslint . && pnpm typecheck && vitest run",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",
@@ -26,6 +31,7 @@
     "vue-router": "^5.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^24.12.3",
     "@vicons/antd": "^0.13.0",
     "@vicons/carbon": "^0.13.0",
@@ -34,15 +40,18 @@
     "@vitejs/plugin-vue": "^6.0.6",
     "@vitejs/plugin-vue-jsx": "^5.1.5",
     "@vue/eslint-config-typescript": "^14.9.0",
+    "@vue/test-utils": "^2.4.11",
     "@vue/tsconfig": "^0.9.1",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-unused-imports": "^4.4.1",
     "eslint-plugin-vue": "^10.9.2",
     "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
     "prettier": "^3.9.4",
     "typescript": "~6.0.2",
     "vite": "^8.0.12",
+    "vitest": "^4.1.10",
     "vue-tsc": "^3.2.8"
   }
 }
