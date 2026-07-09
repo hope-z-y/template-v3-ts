@@ -217,7 +217,7 @@ const getPublicKey = async () => {
   try {
     publicKeyLoading.value = true;
     const data = await GetPublicEncryptKey();
-    publicKey.value = data.publicKey;
+    publicKey.value = data;
   } catch {
     publicKey.value = "";
     // 错误提示由响应拦截器处理。

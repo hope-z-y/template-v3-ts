@@ -72,11 +72,3 @@ export const DeleteUser = (id: number) => {
 export const ResetUserPassword = (id: number, data: Pick<IUpdateUserParams, "password">) => {
   return request.patch<string, IUserDetail>(`/system/users/${id}`, data);
 };
-
-export const getUserList = GetUserList;
-export const getAllUsers = GetAllUsers;
-export const getUserById = GetUserById;
-export const createUser = CreateUser;
-export const updateUser = UpdateUser;
-export const deleteUser = DeleteUser;
-export const resetUserPassword = ResetUserPassword;

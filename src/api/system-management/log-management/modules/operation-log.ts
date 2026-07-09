@@ -35,8 +35,3 @@ export const CleanOperLogs = () => {
 export const DeleteOperLog = (id: number) => {
   return request.delete<string, null>(`/monitor/oper-logs/${id}`);
 };
-
-export const getOperLogList = GetOperLogList;
-export const getOperLogById = GetOperLogById;
-export const cleanOperLogs = CleanOperLogs;
-export const deleteOperLog = DeleteOperLog;

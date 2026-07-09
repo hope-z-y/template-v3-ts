@@ -35,12 +35,6 @@ export interface IRefreshTokenParams {
 /** POST /auth/refresh 响应体 */
 export type IRefreshTokenResponse = IAuthTokenResponse;
 
-/** GET /auth/public-key 响应体 */
-export interface IPublicEncryptKeyResponse {
-  /** RSA 公钥 PEM，供前端加密密码 */
-  publicKey: string;
-}
-
 /** GET /auth/menus 响应体（当前用户角色可见的菜单树） */
 export type IGetUserMenusResponse = IMenu[];
 

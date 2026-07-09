@@ -20,7 +20,7 @@ export const createServerOptions = (env: Record<string, string>): ServerOptions 
       [proxyPrefix]: {
         target: proxyTarget,
         changeOrigin: true,
-        rewrite: (path) => path.replace(new RegExp(`^${proxyPrefix}`), "/api"),
+        rewrite: (path) => path.replace(new RegExp(`^${proxyPrefix}`), "/dev-api"),
         configure: (proxy) => {
           proxy.on("error", (error) => {
             console.error(`[vite proxy] ${proxyPrefix} error:`, error.message);

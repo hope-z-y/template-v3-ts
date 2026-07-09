@@ -41,6 +41,6 @@ const captchaSrc = computed(() => {
   }
 
   // 其它内容一律不渲染，验证码接口异常时宁可空白，也不渲染未知 HTML。
-  return "";
+  return `data:image/svg+xml;base64,${raw}`;
 });
 </script>

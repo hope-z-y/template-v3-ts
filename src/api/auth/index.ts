@@ -2,7 +2,6 @@ import { request } from "@/request";
 import type {
   ICaptchaResponse,
   IGetUserMenusResponse,
-  IPublicEncryptKeyResponse,
   IRefreshTokenParams,
   IRefreshTokenResponse,
   ISignInParams,
@@ -32,7 +31,7 @@ export const SignOut = () => {
  * @returns 验证码开关状态；开启时附带 captchaKey 与验证码图片
  */
 export const GetCaptchaCode = () => {
-  return request.get<string, ICaptchaResponse>("/auth/captcha");
+  return request.get<string, ICaptchaResponse>("/captchaImage");
 };
 
 /**
@@ -40,7 +39,7 @@ export const GetCaptchaCode = () => {
  * @returns PEM 格式公钥
  */
 export const GetPublicEncryptKey = () => {
-  return request.get<string, IPublicEncryptKeyResponse>("/auth/public-key");
+  return request.get<string, string>("/auth/public-key");
 };
 
 /**
@@ -67,12 +66,3 @@ export const GetUserMenus = () => {
 export const GetCurrentUser = () => {
   return request.get<string, IUserProfile>("/auth/profile");
 };
-
-/** camelCase API aliases for new modules */
-export const signIn = SignIn;
-export const signOut = SignOut;
-export const getCaptchaCode = GetCaptchaCode;
-export const getPublicEncryptKey = GetPublicEncryptKey;
-export const refreshToken = RefreshToken;
-export const getUserMenus = GetUserMenus;
-export const getCurrentUser = GetCurrentUser;

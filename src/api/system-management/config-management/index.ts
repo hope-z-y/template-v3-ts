@@ -61,10 +61,3 @@ export const UpdateConfig = (id: number, data: IUpdateConfigParams) => {
 export const DeleteConfig = (id: number) => {
   return request.delete<string, null>(`/system/configs/${id}`);
 };
-
-export const getConfigList = GetConfigList;
-export const getConfigByKey = GetConfigByKey;
-export const getConfigById = GetConfigById;
-export const createConfig = CreateConfig;
-export const updateConfig = UpdateConfig;
-export const deleteConfig = DeleteConfig;

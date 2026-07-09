@@ -59,10 +59,3 @@ export const UpdateMenu = (id: number, data: IUpdateMenuParams) => {
 export const DeleteMenu = (id: number) => {
   return request.delete<string, null>(`/system/menus/${id}`);
 };
-
-export const getMenuList = GetMenuList;
-export const getMenuTree = GetMenuTree;
-export const getMenuById = GetMenuById;
-export const createMenu = CreateMenu;
-export const updateMenu = UpdateMenu;
-export const deleteMenu = DeleteMenu;

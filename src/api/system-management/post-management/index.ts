@@ -46,9 +46,3 @@ export const UpdatePost = (id: number, data: IUpdatePostParams) => {
 export const DeletePost = (id: number) => {
   return request.delete<string, null>(`/system/posts/${id}`);
 };
-
-export const getPostList = GetPostList;
-export const getPostById = GetPostById;
-export const createPost = CreatePost;
-export const updatePost = UpdatePost;
-export const deletePost = DeletePost;
