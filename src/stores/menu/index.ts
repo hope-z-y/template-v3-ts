@@ -1,27 +1,21 @@
-import { GetUserMenus } from "@/api/auth";
-import type { IMenu } from "@/api/types";
+import type { IProfileMenu } from "@/api/types";
 import { registerDynamicRoutes, resetDynamicRoutes } from "@/router/modules/dynamic-routes";
-import { STORE_KEY } from "@/utils/modules/store-key";
 import {
-  buildMenuIconMap,
-  collectMenuButtonPermissions,
-  ensureHomeMenuOption,
-  menusToOptions,
-  normalizeMenuTree,
+  BuildMenuIconMap,
+  EnsureHomeMenuOption,
+  MenusToOptions,
+  STORE_KEY,
   type RouteMenuOption,
-} from "@/utils/modules/menu-to-options";
+} from "@/utils";
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
-/** 菜单与动态路由状态：数据来自 /auth/menus（按角色过滤） */
+/** 菜单与动态路由状态：数据来自 /auth/profile.menus（已按当前用户过滤）。 */
 export const useMenuStore = defineStore(STORE_KEY.MenuStore, () => {
-  const menuTree = ref<IMenu[]>([]);
+  const menuTree = ref<IProfileMenu[]>([]);
   const menus = ref<RouteMenuOption[]>([]);
   const iconByPath = ref<Record<string, string>>({});
-  const loading = ref(false);
   const routesReady = ref(false);
-
-  let pendingInit: Promise<void> | null = null;
 
   const collectNavigablePaths = (items: RouteMenuOption[]): string[] => {
     const paths: string[] = [];
@@ -41,53 +35,24 @@ export const useMenuStore = defineStore(STORE_KEY.MenuStore, () => {
     return paths;
   };
 
-  const applyMenuTree = (tree: IMenu[]) => {
+  /** 把后端菜单树转换为侧边栏数据，并清理已经无权访问的标签页。 */
+  const applyMenuTree = (tree: IProfileMenu[]) => {
     menuTree.value = tree;
-    const options = ensureHomeMenuOption(menusToOptions(tree));
+    const options = EnsureHomeMenuOption(MenusToOptions(tree));
     menus.value = options;
-    iconByPath.value = buildMenuIconMap(options);
+    iconByPath.value = BuildMenuIconMap(options);
 
     import("@/stores/menu-tag").then(({ useMenuTagStore }) => {
       useMenuTagStore().filterByPaths(collectNavigablePaths(options));
     });
   };
 
-  const fetchMenus = async (force = false) => {
-    if (!force && pendingInit) {
-      return pendingInit;
-    }
-
-    pendingInit = (async () => {
-      try {
-        loading.value = true;
-        const data = await GetUserMenus();
-        const tree = normalizeMenuTree(data);
-        applyMenuTree(tree);
-
-        const { useUserStore } = await import("@/stores/user");
-        useUserStore().setMenuPermissions(collectMenuButtonPermissions(tree));
-      } catch (error) {
-        applyMenuTree([]);
-        const { useUserStore } = await import("@/stores/user");
-        useUserStore().setMenuPermissions([]);
-        throw error;
-      } finally {
-        loading.value = false;
-        pendingInit = null;
-      }
-    })();
-
-    return pendingInit;
-  };
-
-  /** 拉取菜单并注册动态路由（路由守卫 / 登录后调用） */
-  const initRoutes = async (force = false) => {
-    if (!force && routesReady.value) {
-      return;
-    }
-
-    await fetchMenus(force);
-
+  /**
+   * 使用 Profile 已返回的菜单注册动态路由。
+   * 此函数不再请求接口，保证一次 Profile 请求即可完成整个登录态初始化。
+   */
+  const initRoutes = async (tree: IProfileMenu[]) => {
+    applyMenuTree(tree);
     const { router } = await import("@/router");
     registerDynamicRoutes(router, menuTree.value);
     routesReady.value = true;
@@ -99,11 +64,7 @@ export const useMenuStore = defineStore(STORE_KEY.MenuStore, () => {
     menuTree.value = [];
     menus.value = [];
     iconByPath.value = {};
-    import("@/stores/user").then(({ useUserStore }) => {
-      useUserStore().setMenuPermissions([]);
-    });
     routesReady.value = false;
-    pendingInit = null;
 
     import("@/router").then(({ router }) => {
       resetDynamicRoutes(router);
@@ -114,9 +75,7 @@ export const useMenuStore = defineStore(STORE_KEY.MenuStore, () => {
     menuTree,
     menus,
     iconByPath,
-    loading,
     routesReady,
-    fetchMenus,
     initRoutes,
     getIconByPath,
     reset,

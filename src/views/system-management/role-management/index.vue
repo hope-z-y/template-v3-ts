@@ -7,8 +7,8 @@
         <NFormItem label="角色名称" path="roleName">
           <NInput v-model:value="query.roleName" placeholder="请输入角色名称" clearable />
         </NFormItem>
-        <NFormItem label="角色编码" path="roleCode">
-          <NInput v-model:value="query.roleCode" placeholder="请输入角色编码" clearable />
+        <NFormItem label="角色编码" path="roleKey">
+          <NInput v-model:value="query.roleKey" placeholder="请输入角色编码" clearable />
         </NFormItem>
         <NFormItem label="状态" path="status">
           <NSelect
@@ -23,7 +23,7 @@
     </template>
 
     <template #toolbar>
-      <Permission value="system:role:add">
+      <Permission value="system:role:create">
         <NButton type="primary" @click="handleCreate">
           <template #icon>
             <NIcon :component="Add24Regular" />
@@ -55,10 +55,9 @@
 
 <script setup lang="ts">
 import { DeleteRole, GetRoleList } from "@/api/system-management";
-import type { IQueryRoleParams } from "@/api/types";
+import type { CommonStatus, IQueryRoleParams } from "@/api/types";
 import { Page, Permission, SearchForm } from "@/components";
 import { useColumnVisibility, useCrudDialog, useDeleteConfirm, useTableQuery } from "@/hooks";
-import type { Status } from "@/utils";
 import Add24Regular from "@vicons/fluent/es/Add24Regular";
 import { NButton, NDataTable, NFormItem, NIcon, NInput, NSelect, type DataTableColumns } from "naive-ui";
 import { computed, onMounted, reactive } from "vue";
@@ -69,13 +68,13 @@ const { confirmDelete } = useDeleteConfirm();
 
 interface RoleQuery {
   roleName?: string;
-  roleCode?: string;
-  status?: number;
+  roleKey?: string;
+  status?: CommonStatus;
 }
 
 const createDefaultQuery = (): RoleQuery => ({
   roleName: undefined,
-  roleCode: undefined,
+  roleKey: undefined,
   status: undefined,
 });
 
@@ -88,11 +87,11 @@ const buildQueryParams = (page: number, pageSize: number): IQueryRoleParams => {
   };
 
   const roleName = query.roleName?.trim();
-  const roleCode = query.roleCode?.trim();
+  const roleKey = query.roleKey?.trim();
 
   if (roleName) params.roleName = roleName;
-  if (roleCode) params.roleCode = roleCode;
-  if (query.status !== undefined && query.status !== null) params.status = query.status as Status;
+  if (roleKey) params.roleKey = roleKey;
+  if (query.status !== undefined && query.status !== null) params.status = query.status;
 
   return params;
 };
@@ -139,7 +138,7 @@ const handleDelete = (row: IRoleRow) => {
 const { columnOptions, visibleKeys } = useColumnVisibility(
   [
     { key: "roleName", title: "角色名称", visible: true },
-    { key: "roleCode", title: "角色编码", visible: true },
+    { key: "roleKey", title: "角色标识", visible: true },
     { key: "roleSort", title: "显示顺序", visible: true },
     { key: "dataScope", title: "数据权限", visible: true },
     { key: "status", title: "状态", visible: true },

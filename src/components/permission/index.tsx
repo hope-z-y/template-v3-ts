@@ -3,7 +3,7 @@ import { computed, defineComponent, type PropType } from "vue";
 
 /**
  * 权限组件适合包裹一整块内容：
- * <Permission value="system:user:add"><NButton>新增</NButton></Permission>
+ * <Permission value="system:user:create"><NButton>新增</NButton></Permission>
  *
  * 如果只是控制单个按钮，也可以使用 v-permission 指令。
  */

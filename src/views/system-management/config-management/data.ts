@@ -1,4 +1,4 @@
-import type { IAuditable, IConfig } from "@/api/types";
+import type { IConfig } from "@/api/types";
 import { useUserStore } from "@/stores";
 import { RenderColumnTitle, type NaiveType } from "@/utils";
 import CalendarLtr24Regular from "@vicons/fluent/es/CalendarLtr24Regular";
@@ -9,16 +9,16 @@ import Wrench24Regular from "@vicons/fluent/es/Wrench24Regular";
 import { NButton, NIcon, NSpace, NTag, type DataTableColumns } from "naive-ui";
 import { h, type Component } from "vue";
 
-export type IConfigRow = IConfig & IAuditable;
+export type IConfigRow = IConfig;
 
 export const configTypeOptions = [
-  { label: "自定义", value: 0 },
-  { label: "内置", value: 1 },
+  { label: "业务参数", value: "business" },
+  { label: "系统参数", value: "system" },
 ];
 
-export const configTypeMap: Record<number, { label: string; type: "default" | "warning" }> = {
-  0: { label: "自定义", type: "default" },
-  1: { label: "内置", type: "warning" },
+export const configTypeMap: Record<string, { label: string; type: "default" | "warning" }> = {
+  business: { label: "业务参数", type: "default" },
+  system: { label: "系统参数", type: "warning" },
 };
 
 const renderActionButton = (label: string, icon: Component, type: NaiveType, onClick: () => void) => {
@@ -43,7 +43,7 @@ export const createConfigColumns = (handlers: IConfigColumnHandlers): DataTableC
   return [
     {
       title: RenderColumnTitle(Wrench24Regular, "参数名称"),
-      key: "configName",
+      key: "paramName",
       minWidth: 140,
       align: "center",
       titleAlign: "center",
@@ -51,7 +51,7 @@ export const createConfigColumns = (handlers: IConfigColumnHandlers): DataTableC
     },
     {
       title: RenderColumnTitle(Wrench24Regular, "参数键名"),
-      key: "configKey",
+      key: "paramKey",
       minWidth: 140,
       align: "center",
       titleAlign: "center",
@@ -59,7 +59,7 @@ export const createConfigColumns = (handlers: IConfigColumnHandlers): DataTableC
     },
     {
       title: RenderColumnTitle(Wrench24Regular, "参数键值"),
-      key: "configValue",
+      key: "paramValue",
       minWidth: 160,
       align: "center",
       titleAlign: "center",
@@ -67,12 +67,12 @@ export const createConfigColumns = (handlers: IConfigColumnHandlers): DataTableC
     },
     {
       title: RenderColumnTitle(Wrench24Regular, "系统内置"),
-      key: "configType",
+      key: "paramType",
       width: 100,
       align: "center",
       titleAlign: "center",
       render: (row) => {
-        const current = configTypeMap[Number(row.configType)] ?? { label: "未知", type: "default" as const };
+        const current = configTypeMap[row.paramType] ?? { label: "未知", type: "default" as const };
         return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
       },
     },
@@ -97,10 +97,10 @@ export const createConfigColumns = (handlers: IConfigColumnHandlers): DataTableC
           {
             default: () =>
               [
-                userStore.hasPermission("system:config:edit")
+                userStore.hasPermission("system:parameter:update")
                   ? renderActionButton("编辑", Edit24Regular, "primary", () => handlers.onEdit(row))
                   : null,
-                Number(row.configType) === 1 || !userStore.hasPermission("system:config:delete")
+                row.paramType === "system" || !userStore.hasPermission("system:parameter:delete")
                   ? null
                   : renderActionButton("删除", Delete24Regular, "error", () => handlers.onDelete(row)),
               ].filter(Boolean),

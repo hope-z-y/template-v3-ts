@@ -1,4 +1,4 @@
-﻿<!-- Fluent 24 Regular 图标选择器 -->
+﻿<!-- Ant Design 图标选择器 -->
 
 <template>
   <NPopover
@@ -30,10 +30,10 @@
     </template>
 
     <div class="py-1">
-      <NInput v-model:value="keyword" placeholder="搜索图标，如 People24Regular" clearable size="small" class="mb-3" />
-      <NScrollbar style="max-height: 280px">
+      <NInput v-model:value="keyword" placeholder="搜索图标，如 UserOutlined" clearable size="small" class="mb-3" />
+      <NScrollbar style="max-height: 280px" class="min-h-12">
         <div class="grid grid-cols-6 gap-1">
-          <NTooltip v-for="name in filteredIcons" :key="name" trigger="hover">
+          <NTooltip v-for="name in pagedIcons" :key="name" trigger="hover">
             <template #trigger>
               <NButton
                 quaternary
@@ -42,37 +42,64 @@
                 @click="handleSelect(name)"
               >
                 <template #icon>
-                  <NIcon :size="24" :component="getFluentIconComponent(name) ?? undefined" />
+                  <NIcon :size="24" :component="GetAntdIconComponent(name) ?? undefined" />
                 </template>
               </NButton>
             </template>
             {{ name }}
           </NTooltip>
         </div>
+        <NEmpty v-if="!filteredIcons.length" description="未找到匹配图标" size="small" class="py-5" />
       </NScrollbar>
+      <div
+        v-if="filteredIcons.length"
+        class="mt-3 flex items-center justify-between gap-2 border-t border-gray-200 pt-3"
+      >
+        <span class="shrink-0 text-xs text-gray-500">共 {{ filteredIcons.length }} 个</span>
+        <NPagination
+          v-model:page="page"
+          :page-size="PAGE_SIZE"
+          :item-count="filteredIcons.length"
+          :page-slot="5"
+          size="small"
+        />
+      </div>
     </div>
   </NPopover>
 </template>
 
 <script setup lang="ts">
-import { getFluentIconComponent, MENU_FLUENT_ICON_NAMES } from "@/utils/modules/fluent-icon";
+import { ANTD_ICON_NAMES, GetAntdIconComponent } from "@/utils";
 import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
-import { NButton, NIcon, NInput, NPopover, NScrollbar, NTooltip } from "naive-ui";
-import { computed, ref } from "vue";
+import { NButton, NEmpty, NIcon, NInput, NPagination, NPopover, NScrollbar, NTooltip } from "naive-ui";
+import { computed, ref, watch } from "vue";
+
+const PAGE_SIZE = 36;
 
 const modelValue = defineModel<string>("value", { default: "" });
 
 const popoverVisible = ref(false);
 const keyword = ref("");
+const page = ref(1);
 
-const selectedIcon = computed(() => getFluentIconComponent(modelValue.value));
+const selectedIcon = computed(() => GetAntdIconComponent(modelValue.value));
 
 const displayValue = computed(() => modelValue.value || "");
 
 const filteredIcons = computed(() => {
   const key = keyword.value.trim().toLowerCase();
-  if (!key) return MENU_FLUENT_ICON_NAMES;
-  return MENU_FLUENT_ICON_NAMES.filter((name) => name.toLowerCase().includes(key));
+  if (!key) return ANTD_ICON_NAMES;
+  return ANTD_ICON_NAMES.filter((name) => name.toLowerCase().includes(key));
+});
+
+/** 每页只挂载少量图标组件，避免打开弹窗时同时渲染整个图标库。 */
+const pagedIcons = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE;
+  return filteredIcons.value.slice(start, start + PAGE_SIZE);
+});
+
+watch(keyword, () => {
+  page.value = 1;
 });
 
 const handleSelect = (name: string) => {

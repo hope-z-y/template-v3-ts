@@ -4,7 +4,7 @@
   <NModal
     v-model:show="visible"
     preset="dialog"
-    style="width: min(780px, calc(100vw - 32px))"
+    style="width: 40vw"
     :title="mode === 'create' ? '新增菜单' : '编辑菜单'"
     :mask-closable="false"
     :show-icon="false"
@@ -55,10 +55,10 @@
           </NRadioGroup>
         </NFormItem>
 
-        <template v-if="formModel.menuType === 'M' || formModel.menuType === 'C'">
-          <NFormItem label="路由地址" path="path">
+        <template v-if="formModel.menuType !== 'button'">
+          <NFormItem label="路由地址" path="routePath">
             <NInput
-              v-model:value="formModel.path"
+              v-model:value="formModel.routePath"
               placeholder="请输入路由地址，如：/system-management/user-management"
               maxlength="200"
             />
@@ -69,7 +69,7 @@
           <NFormItem label="显示状态" path="visible">
             <NRadioGroup v-model:value="formModel.visible">
               <NSpace>
-                <NRadio v-for="item in visibleOptions" :key="item.value" :value="item.value">
+                <NRadio v-for="item in visibleOptions" :key="String(item.value)" :value="item.value">
                   {{ item.label }}
                 </NRadio>
               </NSpace>
@@ -77,7 +77,7 @@
           </NFormItem>
         </template>
 
-        <template v-if="formModel.menuType === 'C'">
+        <template v-if="formModel.menuType === 'menu'">
           <NFormItem label="组件路径" path="component">
             <NInput
               v-model:value="formModel.component"
@@ -85,22 +85,13 @@
               maxlength="200"
             />
           </NFormItem>
-          <NFormItem label="路由参数" path="query">
-            <NInput v-model:value="formModel.query" placeholder='请输入路由参数，如：{"id": 1}' maxlength="200" />
+          <NFormItem label="外链地址" path="externalLink">
+            <NInput v-model:value="formModel.externalLink" placeholder="请输入外链地址（可选）" maxlength="500" />
           </NFormItem>
-          <NFormItem label="是否外链" path="isFrame">
-            <NRadioGroup v-model:value="formModel.isFrame">
+          <NFormItem label="是否缓存" path="cacheable">
+            <NRadioGroup v-model:value="formModel.cacheable">
               <NSpace>
-                <NRadio v-for="item in isFrameOptions" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </NRadio>
-              </NSpace>
-            </NRadioGroup>
-          </NFormItem>
-          <NFormItem label="是否缓存" path="isCache">
-            <NRadioGroup v-model:value="formModel.isCache">
-              <NSpace>
-                <NRadio v-for="item in isCacheOptions" :key="item.value" :value="item.value">
+                <NRadio v-for="item in isCacheOptions" :key="String(item.value)" :value="item.value">
                   {{ item.label }}
                 </NRadio>
               </NSpace>
@@ -108,10 +99,10 @@
           </NFormItem>
         </template>
 
-        <NFormItem v-if="formModel.menuType === 'F'" label="权限标识" path="permission" class="col-span-2">
+        <NFormItem v-if="formModel.menuType === 'button'" label="权限标识" path="permissionCode" class="col-span-2">
           <NInput
-            v-model:value="formModel.permission"
-            placeholder="请输入权限标识，如：system:user:add"
+            v-model:value="formModel.permissionCode"
+            placeholder="请输入权限标识，如：system:user:create"
             maxlength="100"
           />
         </NFormItem>
@@ -139,7 +130,7 @@
 
 <script setup lang="ts">
 import { CreateMenu, GetMenuById, GetMenuTree, UpdateMenu } from "@/api/system-management";
-import type { ICreateMenuParams, IMenu, IUpdateMenuParams } from "@/api/types";
+import type { CommonStatus, ICreateMenuParams, IMenu, IUpdateMenuParams, MenuType } from "@/api/types";
 import { IconPicker } from "@/components";
 import Checkmark24Regular from "@vicons/fluent/es/Checkmark24Regular";
 import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
@@ -162,38 +153,36 @@ import {
   type TreeSelectOption,
 } from "naive-ui";
 import { computed, ref, watch } from "vue";
-import { isCacheOptions, isFrameOptions, menuTypeOptions, statusOptions, visibleOptions } from "../data";
+import { isCacheOptions, menuTypeOptions, statusOptions, visibleOptions } from "../data";
 
 interface MenuFormModel {
-  parentId: number;
-  menuType: "M" | "C" | "F";
+  parentId: string | null;
+  menuType: MenuType;
   menuName: string;
-  permission: string;
-  path: string;
+  permissionCode: string;
+  routePath: string;
   component: string;
-  query: string;
+  externalLink: string;
   icon: string;
   sort: number;
-  visible: number;
-  status: number;
-  isFrame: number;
-  isCache: number;
+  visible: boolean;
+  status: CommonStatus;
+  cacheable: boolean;
 }
 
 const createDefaultForm = (): MenuFormModel => ({
-  parentId: 0,
-  menuType: "M",
+  parentId: null,
+  menuType: "directory",
   menuName: "",
-  permission: "",
-  path: "",
+  permissionCode: "",
+  routePath: "",
   component: "",
-  query: "",
+  externalLink: "",
   icon: "",
   sort: 0,
-  visible: 1,
-  status: 1,
-  isFrame: 0,
-  isCache: 0,
+  visible: true,
+  status: "enabled",
+  cacheable: false,
 });
 
 const props = defineProps<{
@@ -219,8 +208,8 @@ const rules = computed<FormRules>(() => ({
   menuType: [{ required: true, message: "请选择菜单类型", trigger: ["change"] }],
 }));
 
-const toTreeOptions = (menus: IMenu[], excludeId?: number): TreeSelectOption[] => {
-  const root: TreeSelectOption = { key: 0, label: "根目录" };
+const toTreeOptions = (menus: IMenu[], excludeId?: string): TreeSelectOption[] => {
+  const root: TreeSelectOption = { key: "root", label: "根目录" };
 
   const mapNodes = (nodes: IMenu[]): TreeSelectOption[] =>
     nodes
@@ -255,19 +244,18 @@ const loadMenuDetail = async () => {
   try {
     const menu = await GetMenuById(props.record.id);
     formModel.value = {
-      parentId: menu.parentId ?? 0,
-      menuType: menu.menuType as "M" | "C" | "F",
+      parentId: menu.parentId,
+      menuType: menu.menuType,
       menuName: menu.menuName,
-      permission: menu.permission ?? "",
-      path: menu.path ?? "",
+      permissionCode: menu.permissionCode ?? "",
+      routePath: menu.routePath ?? "",
       component: menu.component ?? "",
-      query: menu.query ?? "",
+      externalLink: menu.externalLink ?? "",
       icon: menu.icon ?? "",
       sort: menu.sort ?? 0,
-      visible: menu.visible ?? 1,
+      visible: menu.visible,
       status: menu.status,
-      isFrame: menu.isFrame ?? 0,
-      isCache: menu.isCache ?? 0,
+      cacheable: menu.cacheable,
     };
   } catch {
     resetFormFromRecord();
@@ -277,19 +265,18 @@ const loadMenuDetail = async () => {
 const resetFormFromRecord = () => {
   if (props.mode === "edit" && props.record) {
     formModel.value = {
-      parentId: props.record.parentId ?? 0,
-      menuType: props.record.menuType as "M" | "C" | "F",
+      parentId: props.record.parentId,
+      menuType: props.record.menuType,
       menuName: props.record.menuName,
-      permission: props.record.permission ?? "",
-      path: props.record.path ?? "",
+      permissionCode: props.record.permissionCode ?? "",
+      routePath: props.record.routePath ?? "",
       component: props.record.component ?? "",
-      query: props.record.query ?? "",
+      externalLink: props.record.externalLink ?? "",
       icon: props.record.icon ?? "",
       sort: props.record.sort ?? 0,
-      visible: props.record.visible ?? 1,
+      visible: props.record.visible,
       status: props.record.status,
-      isFrame: props.record.isFrame ?? 0,
-      isCache: props.record.isCache ?? 0,
+      cacheable: props.record.cacheable,
     };
     return;
   }
@@ -299,28 +286,27 @@ const resetFormFromRecord = () => {
 
 const buildPayload = (): ICreateMenuParams | IUpdateMenuParams => {
   const base: ICreateMenuParams = {
-    parentId: formModel.value.parentId ?? 0,
+    parentId: formModel.value.parentId === "root" ? null : formModel.value.parentId,
     menuType: formModel.value.menuType,
     menuName: formModel.value.menuName.trim(),
     sort: formModel.value.sort,
     status: formModel.value.status,
   };
 
-  if (formModel.value.menuType === "M" || formModel.value.menuType === "C") {
-    base.path = formModel.value.path.trim() || undefined;
+  if (formModel.value.menuType !== "button") {
+    base.routePath = formModel.value.routePath.trim() || undefined;
     base.icon = formModel.value.icon.trim() || undefined;
     base.visible = formModel.value.visible;
   }
 
-  if (formModel.value.menuType === "C") {
+  if (formModel.value.menuType === "menu") {
     base.component = formModel.value.component.trim() || undefined;
-    base.query = formModel.value.query.trim() || undefined;
-    base.isFrame = formModel.value.isFrame;
-    base.isCache = formModel.value.isCache;
+    base.externalLink = formModel.value.externalLink.trim() || undefined;
+    base.cacheable = formModel.value.cacheable;
   }
 
-  if (formModel.value.menuType === "F") {
-    base.permission = formModel.value.permission.trim() || undefined;
+  if (formModel.value.menuType === "button") {
+    base.permissionCode = formModel.value.permissionCode.trim() || undefined;
   }
 
   return base;

@@ -1,7 +1,6 @@
-import type { IMenu } from "@/api/types";
+import type { IProfileMenu } from "@/api/types";
 import type { RouteRecordRaw } from "vue-router";
-import { getMenuType, isSidebarMenuNode, resolveMenuRoutePath } from "./menu-to-options";
-import { isNumericTrue } from "./number-boolean";
+import { IsSidebarMenuNode, ResolveMenuRoutePath } from "./menu-to-options";
 
 /** Vite 预扫描的视图模块，用于将后端 component 字段映射为懒加载组件 */
 const viewModules = import.meta.glob("@/views/**/*.vue");
@@ -30,7 +29,7 @@ const toRouteSegment = (fullPath: string, parentFullPath: string) => {
 };
 
 /** path -> PascalCase 路由名 */
-const pathToRouteName = (fullPath: string, menuId: number) => {
+const pathToRouteName = (fullPath: string, menuId: string) => {
   const base = fullPath
     .replace(/^\//, "")
     .split(/[/\-_]+/)
@@ -41,8 +40,14 @@ const pathToRouteName = (fullPath: string, menuId: number) => {
   return base || `Menu${menuId}`;
 };
 
-/** 解析后端 component 字段为 Vue 组件懒加载函数 */
-export const resolveViewComponent = (component?: string | null) => {
+/**
+ * ResolveViewComponent
+ * 解析后端 component 字段为 Vue 组件懒加载函数；找不到时回退到 404 页面。
+ *
+ * @param component - 后端菜单的 component 字段，允许为 undefined 或 null
+ * @returns (() => Promise<unknown>) - Vite glob 匹配到的懒加载函数，或 404 兜底
+ */
+export const ResolveViewComponent = (component?: string | null) => {
   if (!component?.trim()) return notFoundComponent;
 
   const normalized = component
@@ -61,26 +66,13 @@ export const resolveViewComponent = (component?: string | null) => {
   return viewModules[matchedKey];
 };
 
-const parseRouteQuery = (query?: string | null): Record<string, unknown> | undefined => {
-  if (!query?.trim()) return undefined;
-
-  try {
-    return JSON.parse(query) as Record<string, unknown>;
-  } catch {
-    console.warn("[router] 路由参数 JSON 解析失败:", query);
-    return undefined;
-  }
-};
-
 /** 是否应生成路由（排除按钮、外链、无组件的菜单页） */
-const isRouteMenuNode = (menu: IMenu, fullPath: string) => {
-  if (!isSidebarMenuNode(menu)) return false;
+const isRouteMenuNode = (menu: IProfileMenu, fullPath: string) => {
+  if (!IsSidebarMenuNode(menu)) return false;
   if (isExternalPath(fullPath)) return false;
-  if (isNumericTrue(menu.isFrame)) return false;
-
-  const type = getMenuType(menu);
-  if (type === "F") return false;
-  if (type === "C" && !menu.component?.trim()) return false;
+  if (menu.externalLink?.trim()) return false;
+  if (menu.menuType === "button") return false;
+  if (menu.menuType === "menu" && !menu.component?.trim()) return false;
 
   return true;
 };
@@ -104,8 +96,14 @@ const findFirstNavigablePath = (routes: RouteRecordRaw[], parentPath = ""): stri
   return undefined;
 };
 
-/** 收集路由树中所有 route.name，便于注销动态路由 */
-export const collectRouteNames = (routes: RouteRecordRaw[]): string[] => {
+/**
+ * CollectRouteNames
+ * 收集路由树中所有 route.name，便于注销动态路由。
+ *
+ * @param routes - vue-router 路由配置数组
+ * @returns string[] - 所有字符串类型的路由 name 列表
+ */
+export const CollectRouteNames = (routes: RouteRecordRaw[]): string[] => {
   const names: string[] = [];
 
   const walk = (items: RouteRecordRaw[]) => {
@@ -124,36 +122,40 @@ export const collectRouteNames = (routes: RouteRecordRaw[]): string[] => {
 };
 
 /**
+ * MenusToRoutes
  * 将后端菜单树转换为 vue-router 路由配置。
- * 目录(M)生成嵌套路由，菜单(C)生成叶子路由；按钮(F)与外链不参与注册。
+ * directory 生成嵌套路由，menu 生成页面路由；button 与外链不参与注册。
+ *
+ * @param menus - Profile 菜单树数组
+ * @param parentPath - 父级已解析完整路径，默认为空字符串
+ * @returns RouteRecordRaw[] - 可挂载到 Container 下的路由配置
  */
-export const menusToRoutes = (menus: IMenu[], parentPath = ""): RouteRecordRaw[] => {
+export const MenusToRoutes = (menus: IProfileMenu[], parentPath = ""): RouteRecordRaw[] => {
   const routes: RouteRecordRaw[] = [];
 
   menus.forEach((menu) => {
-    const type = getMenuType(menu);
-    const fullPath = resolveMenuRoutePath(menu, parentPath);
+    const fullPath = ResolveMenuRoutePath(menu, parentPath);
 
     if (!isRouteMenuNode(menu, fullPath)) return;
 
     const childParentPath = fullPath;
-    const childRoutes = menu.children?.length ? menusToRoutes(menu.children, childParentPath) : undefined;
+    const childRoutes = menu.children?.length ? MenusToRoutes(menu.children, childParentPath) : undefined;
     const routePath = toRouteSegment(fullPath, parentPath);
 
     const routeMeta = {
       title: menu.menuName,
       icon: menu.icon ?? undefined,
-      keepAlive: isNumericTrue(menu.isCache),
+      keepAlive: menu.cacheable,
       menuId: menu.id,
-      permission: menu.permission ?? undefined,
+      permission: menu.permissionCode ?? undefined,
     };
 
     const route: RouteRecordRaw =
-      type === "C"
+      menu.menuType === "menu"
         ? {
             path: routePath,
             name: pathToRouteName(fullPath, menu.id),
-            component: resolveViewComponent(menu.component),
+            component: ResolveViewComponent(menu.component),
             children: childRoutes ?? [],
             meta: routeMeta,
           }
@@ -165,13 +167,6 @@ export const menusToRoutes = (menus: IMenu[], parentPath = ""): RouteRecordRaw[]
             meta: routeMeta,
           };
 
-    if (type === "C") {
-      const query = parseRouteQuery(menu.query);
-      if (query) {
-        route.props = query;
-      }
-    }
-
     if (childRoutes?.length) {
       const redirectPath = findFirstNavigablePath(childRoutes, fullPath);
       if (redirectPath) {
@@ -180,7 +175,7 @@ export const menusToRoutes = (menus: IMenu[], parentPath = ""): RouteRecordRaw[]
     }
 
     // 纯目录且无子路由时不注册
-    if (type === "M" && (!childRoutes || childRoutes.length === 0) && !menu.path?.trim()) {
+    if (menu.menuType === "directory" && (!childRoutes || childRoutes.length === 0) && !menu.routePath?.trim()) {
       return;
     }
 

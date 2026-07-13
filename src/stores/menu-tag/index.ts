@@ -1,6 +1,6 @@
 import { router } from "@/router";
 import { useMenuStore } from "@/stores/menu";
-import { STORE_KEY } from "@/utils/modules/store-key";
+import { STORE_KEY } from "@/utils";
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import type { RouteLocationNormalizedLoaded } from "vue-router";
@@ -14,7 +14,7 @@ export interface MenuTagItem {
   path: string;
   /** 展示标题，对应路由 meta.title */
   title: string;
-  /** Fluent 图标组件名，对应路由 meta.icon */
+  /** Ant Design 图标组件名，对应路由 meta.icon */
   icon?: string;
   /** 是否固定；固定标签不会被批量关闭或单独删除 */
   affixed?: boolean;
@@ -27,7 +27,7 @@ const HOME_PATH = "/home";
 const HOME_TAG: MenuTagItem = {
   path: HOME_PATH,
   title: "首页",
-  icon: "AlignCenterHorizontal20Regular",
+  icon: "HomeOutlined",
   affixed: true,
 };
 

@@ -4,7 +4,7 @@
   <NModal
     v-model:show="visible"
     preset="dialog"
-    style="width: min(620px, calc(100vw - 32px))"
+    style="width: 40vw"
     :title="mode === 'create' ? '新增岗位' : '编辑岗位'"
     :mask-closable="false"
     :show-icon="false"
@@ -70,7 +70,7 @@
 
 <script setup lang="ts">
 import { CreatePost, GetPostById, UpdatePost } from "@/api/system-management";
-import type { ICreatePostParams, IUpdatePostParams } from "@/api/types";
+import type { CommonStatus, ICreatePostParams, IUpdatePostParams } from "@/api/types";
 import Checkmark24Regular from "@vicons/fluent/es/Checkmark24Regular";
 import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
 import {
@@ -95,7 +95,7 @@ interface PostFormModel {
   postCode: string;
   postName: string;
   postSort: number;
-  status: number;
+  status: CommonStatus;
   remark: string;
 }
 
@@ -103,7 +103,7 @@ const createDefaultForm = (): PostFormModel => ({
   postCode: "",
   postName: "",
   postSort: 0,
-  status: 1,
+  status: "enabled",
   remark: "",
 });
 

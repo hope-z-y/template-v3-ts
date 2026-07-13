@@ -12,13 +12,13 @@ import { NButton, NIcon, NSpace, NTag, type DataTableColumns } from "naive-ui";
 import { h, type Component } from "vue";
 
 export const loginStatusOptions = [
-  { label: "成功", value: 1 },
-  { label: "失败", value: 0 },
+  { label: "成功", value: "success" },
+  { label: "失败", value: "fail" },
 ];
 
-export const loginStatusMap: Record<number, { label: string; type: "success" | "error" }> = {
-  1: { label: "成功", type: "success" },
-  0: { label: "失败", type: "error" },
+export const loginStatusMap: Record<string, { label: string; type: "success" | "error" }> = {
+  success: { label: "成功", type: "success" },
+  fail: { label: "失败", type: "error" },
 };
 
 const renderActionButton = (label: string, icon: Component, type: NaiveType, onClick: () => void) => {
@@ -43,7 +43,7 @@ export const createLoginLogColumns = (handlers: ILoginLogColumnHandlers): DataTa
   return [
     {
       title: RenderColumnTitle(Person24Regular, "登录账号"),
-      key: "account",
+      key: "username",
       minWidth: 120,
       align: "center",
       titleAlign: "center",
@@ -51,20 +51,20 @@ export const createLoginLogColumns = (handlers: ILoginLogColumnHandlers): DataTa
     },
     {
       title: RenderColumnTitle(Globe24Regular, "登录 IP"),
-      key: "ip",
+      key: "loginIp",
       width: 140,
       align: "center",
       titleAlign: "center",
-      render: (row) => row.ip || "-",
+      render: (row) => row.loginIp || "-",
     },
     {
       title: RenderColumnTitle(Globe24Regular, "登录地点"),
-      key: "location",
+      key: "loginLocation",
       minWidth: 120,
       align: "center",
       titleAlign: "center",
       ellipsis: { tooltip: true },
-      render: (row) => row.location || "-",
+      render: (row) => row.loginLocation || "-",
     },
     {
       title: RenderColumnTitle(Globe24Regular, "浏览器"),
@@ -91,22 +91,22 @@ export const createLoginLogColumns = (handlers: ILoginLogColumnHandlers): DataTa
       align: "center",
       titleAlign: "center",
       render: (row) => {
-        const current = loginStatusMap[Number(row.status)] ?? { label: "未知", type: "error" as const };
+        const current = loginStatusMap[row.status] ?? { label: "未知", type: "error" as const };
         return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
       },
     },
     {
       title: RenderColumnTitle(Status24Regular, "提示消息"),
-      key: "msg",
+      key: "message",
       minWidth: 140,
       align: "center",
       titleAlign: "center",
       ellipsis: { tooltip: true },
-      render: (row) => row.msg || "-",
+      render: (row) => row.message || "-",
     },
     {
       title: RenderColumnTitle(CalendarLtr24Regular, "登录时间"),
-      key: "loginTime",
+      key: "loginAt",
       width: 180,
       align: "center",
       titleAlign: "center",
@@ -128,7 +128,7 @@ export const createLoginLogColumns = (handlers: ILoginLogColumnHandlers): DataTa
                 handlers.onDetail
                   ? renderActionButton("详情", Eye24Regular, "primary", () => handlers.onDetail!(row))
                   : null,
-                userStore.hasPermission("monitor:login-log:delete")
+                userStore.hasPermission("system:login-log:delete")
                   ? renderActionButton("删除", Delete24Regular, "error", () => handlers.onDelete(row))
                   : null,
               ].filter(Boolean),

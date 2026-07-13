@@ -14,7 +14,7 @@ import type {
  * @returns 分页部门列表
  */
 export const GetDeptList = (params: IQueryDeptParams) => {
-  return request.get<string, IGetDeptListResponse>("/system/depts", { params });
+  return request.get<string, IGetDeptListResponse>("/system/department", { params });
 };
 
 /**
@@ -22,7 +22,7 @@ export const GetDeptList = (params: IQueryDeptParams) => {
  * @returns 部门树
  */
 export const GetDeptTree = () => {
-  return request.get<string, IGetDeptTreeResponse>("/system/depts/tree");
+  return request.get<string, IGetDeptTreeResponse>("/system/department/tree");
 };
 
 /**
@@ -30,8 +30,8 @@ export const GetDeptTree = () => {
  * @param id 部门 ID
  * @returns 部门详情
  */
-export const GetDeptById = (id: number) => {
-  return request.get<string, IDept>(`/system/depts/${id}`);
+export const GetDeptById = (id: string) => {
+  return request.get<string, IDept>(`/system/department/${id}`);
 };
 
 /**
@@ -40,7 +40,7 @@ export const GetDeptById = (id: number) => {
  * @returns 创建后的部门详情
  */
 export const CreateDept = (data: ICreateDeptParams) => {
-  return request.post<string, IDept>("/system/depts", data);
+  return request.post<string, string>("/system/department", data);
 };
 
 /**
@@ -49,8 +49,8 @@ export const CreateDept = (data: ICreateDeptParams) => {
  * @param data 请求体
  * @returns 更新后的部门详情
  */
-export const UpdateDept = (id: number, data: IUpdateDeptParams) => {
-  return request.patch<string, IDept>(`/system/depts/${id}`, data);
+export const UpdateDept = (id: string, data: IUpdateDeptParams) => {
+  return request.patch<string, string>(`/system/department/${id}`, data);
 };
 
 /**
@@ -58,6 +58,6 @@ export const UpdateDept = (id: number, data: IUpdateDeptParams) => {
  * @param id 部门 ID
  * @returns 无业务数据
  */
-export const DeleteDept = (id: number) => {
-  return request.delete<string, null>(`/system/depts/${id}`);
+export const DeleteDept = (id: string) => {
+  return request.delete<string, string>(`/system/department/${id}`);
 };

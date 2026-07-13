@@ -4,7 +4,7 @@
   <NModal
     v-model:show="visible"
     preset="dialog"
-    style="width: 480px"
+    style="width: 40vw"
     :title="mode === 'create' ? '新增字典类型' : '编辑字典类型'"
     :mask-closable="false"
     :show-icon="false"
@@ -55,7 +55,7 @@
 
 <script setup lang="ts">
 import { CreateDictType, GetDictTypeById, UpdateDictType } from "@/api/system-management";
-import type { ICreateDictTypeParams, IUpdateDictTypeParams } from "@/api/types";
+import type { CommonStatus, ICreateDictTypeParams, IUpdateDictTypeParams } from "@/api/types";
 import {
   NButton,
   NForm,
@@ -75,14 +75,14 @@ import { statusOptions, type IDictTypeRow } from "../data";
 interface TypeFormModel {
   dictName: string;
   dictType: string;
-  status: number;
+  status: CommonStatus;
   remark: string;
 }
 
 const createDefaultForm = (): TypeFormModel => ({
   dictName: "",
   dictType: "",
-  status: 1,
+  status: "enabled",
   remark: "",
 });
 

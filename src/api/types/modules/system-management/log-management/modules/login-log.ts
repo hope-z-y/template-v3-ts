@@ -1,25 +1,24 @@
 import type { IPagination, IPaginationData } from "../../../common";
+import type { EntityId, LogStatus } from "../../common";
 
-/** GET /monitor/login-logs 查询参数 */
 export interface IQueryLoginLogParams extends IPagination {
-  /** 登录用户名（模糊匹配） */
-  account?: string;
-  /** 登录状态：0成功 1失败 */
-  status?: number;
+  userId?: EntityId;
+  username?: string;
+  loginIp?: string;
+  status?: LogStatus;
+  loginStartAt?: string;
+  loginEndAt?: string;
 }
-
-/** 登录日志实体 */
 export interface ILoginLog {
-  id: number;
-  account: string;
-  ip: string | null;
-  location: string | null;
+  id: EntityId;
+  userId: EntityId | null;
+  username: string | null;
+  loginIp: string | null;
+  loginLocation: string | null;
   browser: string | null;
   os: string | null;
-  status: number;
-  msg: string | null;
-  loginTime: string;
+  status: LogStatus;
+  message: string | null;
+  loginAt: string;
 }
-
-/** GET /monitor/login-logs 响应体 */
 export type IGetLoginLogListResponse = IPaginationData<ILoginLog>;

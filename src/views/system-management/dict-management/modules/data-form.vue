@@ -4,7 +4,7 @@
   <NModal
     v-model:show="visible"
     preset="dialog"
-    style="width: 520px"
+    style="width: 40vw"
     :title="mode === 'create' ? '新增字典数据' : '编辑字典数据'"
     :mask-closable="false"
     :show-icon="false"
@@ -20,13 +20,13 @@
       <NFormItem label="字典键值" path="dictValue">
         <NInput v-model:value="formModel.dictValue" placeholder="请输入字典键值" maxlength="50" show-count />
       </NFormItem>
-      <NFormItem label="显示顺序" path="dictSort">
-        <NInputNumber v-model:value="formModel.dictSort" class="w-full" placeholder="请输入显示顺序" :min="0" />
+      <NFormItem label="显示顺序" path="sort">
+        <NInputNumber v-model:value="formModel.sort" class="w-full" placeholder="请输入显示顺序" :min="0" />
       </NFormItem>
       <NFormItem label="是否默认" path="isDefault">
         <NRadioGroup v-model:value="formModel.isDefault">
           <NSpace>
-            <NRadio v-for="item in isDefaultOptions" :key="item.value" :value="item.value">
+            <NRadio v-for="item in isDefaultOptions" :key="String(item.value)" :value="item.value">
               {{ item.label }}
             </NRadio>
           </NSpace>
@@ -64,7 +64,7 @@
 
 <script setup lang="ts">
 import { CreateDictData, GetDictDataById, UpdateDictData } from "@/api/system-management";
-import type { ICreateDictDataParams, IUpdateDictDataParams } from "@/api/types";
+import type { CommonStatus, ICreateDictDataParams, IUpdateDictDataParams } from "@/api/types";
 import {
   NButton,
   NForm,
@@ -85,18 +85,18 @@ import { isDefaultOptions, statusOptions, type IDictDataRow } from "../data";
 interface DataFormModel {
   dictLabel: string;
   dictValue: string;
-  dictSort: number;
-  isDefault: number;
-  status: number;
+  sort: number;
+  isDefault: boolean;
+  status: CommonStatus;
   remark: string;
 }
 
 const createDefaultForm = (): DataFormModel => ({
   dictLabel: "",
   dictValue: "",
-  dictSort: 0,
-  isDefault: 0,
-  status: 1,
+  sort: 0,
+  isDefault: false,
+  status: "enabled",
   remark: "",
 });
 
@@ -104,6 +104,7 @@ const props = defineProps<{
   mode: "create" | "edit";
   record?: IDictDataRow | null;
   dictType?: string;
+  dictTypeId?: string;
 }>();
 
 const emit = defineEmits<{ success: [] }>();
@@ -127,8 +128,8 @@ const loadDetail = async () => {
     formModel.value = {
       dictLabel: detail.dictLabel,
       dictValue: detail.dictValue,
-      dictSort: detail.dictSort ?? 0,
-      isDefault: detail.isDefault ?? 0,
+      sort: detail.sort ?? 0,
+      isDefault: detail.isDefault ?? false,
       status: detail.status,
       remark: detail.remark ?? "",
     };
@@ -142,8 +143,8 @@ const resetFormFromRecord = () => {
     formModel.value = {
       dictLabel: props.record.dictLabel,
       dictValue: props.record.dictValue,
-      dictSort: props.record.dictSort ?? 0,
-      isDefault: props.record.isDefault ?? 0,
+      sort: props.record.sort ?? 0,
+      isDefault: props.record.isDefault ?? false,
       status: props.record.status,
       remark: props.record.remark ?? "",
     };
@@ -159,7 +160,7 @@ const handleAfterLeave = () => {
 };
 
 const handleSubmit = async () => {
-  if (!props.dictType) {
+  if (!props.dictTypeId) {
     message.warning("请先选择字典类型");
     return;
   }
@@ -171,10 +172,10 @@ const handleSubmit = async () => {
   }
 
   const payload: ICreateDictDataParams | IUpdateDictDataParams = {
-    dictType: props.dictType,
+    dictTypeId: props.dictTypeId,
     dictLabel: formModel.value.dictLabel.trim(),
     dictValue: formModel.value.dictValue.trim(),
-    dictSort: formModel.value.dictSort,
+    sort: formModel.value.sort,
     isDefault: formModel.value.isDefault,
     status: formModel.value.status,
     remark: formModel.value.remark.trim() || undefined,

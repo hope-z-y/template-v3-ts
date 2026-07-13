@@ -10,7 +10,7 @@
   <NModal
     v-model:show="visible"
     preset="dialog"
-    style="width: min(760px, calc(100vw - 32px))"
+    style="width: 40vw"
     :title="mode === 'create' ? '新增用户' : '编辑用户'"
     :mask-closable="false"
     :show-icon="false"
@@ -146,8 +146,8 @@
 // #region 依赖引入
 import { GetPublicEncryptKey } from "@/api/auth";
 import { CreateUser, GetDeptTree, GetPostList, GetRoleList, GetUserById, UpdateUser } from "@/api/system-management";
-import type { ICreateUserParams, IDept, IUpdateUserParams } from "@/api/types";
-import { Encrypt, type Status } from "@/utils";
+import type { CommonStatus, Gender, ICreateUserParams, IDept, IUpdateUserParams } from "@/api/types";
+import { Encrypt } from "@/utils";
 import Checkmark24Regular from "@vicons/fluent/es/Checkmark24Regular";
 import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
 import {
@@ -186,12 +186,12 @@ interface UserFormModel {
   username: string;
   phone: string;
   email: string;
-  gender: number;
-  deptId: number | null;
-  status: number;
+  gender: Gender;
+  deptId: string | null;
+  status: CommonStatus;
   remark: string;
-  roleIds: number[];
-  postIds: number[];
+  roleIds: string[];
+  postIds: string[];
 }
 
 /** 表单初始值工厂函数，便于重置 */
@@ -201,9 +201,9 @@ const createDefaultForm = (): UserFormModel => ({
   username: "",
   phone: "",
   email: "",
-  gender: 0,
+  gender: "unknown",
   deptId: null,
-  status: 1,
+  status: "enabled",
   remark: "",
   roleIds: [],
   postIds: [],
@@ -303,7 +303,7 @@ const loadDeptTree = async () => {
 const loadRoleOptions = async () => {
   try {
     roleLoading.value = true;
-    const { rows } = await GetRoleList({ pageNum: 1, pageSize: 100, status: 1 });
+    const { rows } = await GetRoleList({ pageNum: 1, pageSize: 100, status: "enabled" });
     roleOptions.value = rows.map((role) => ({
       value: role.id,
       label: role.roleName,
@@ -319,7 +319,7 @@ const loadRoleOptions = async () => {
 const loadPostOptions = async () => {
   try {
     postLoading.value = true;
-    const { rows } = await GetPostList({ pageNum: 1, pageSize: 100, status: 1 });
+    const { rows } = await GetPostList({ pageNum: 1, pageSize: 100, status: "enabled" });
     postOptions.value = rows.map((post) => ({
       value: post.id,
       label: post.postName,
@@ -345,12 +345,12 @@ const loadUserDetail = async () => {
       username: user.username ?? "",
       phone: user.phone ?? "",
       email: user.email ?? "",
-      gender: user.gender ?? 0,
-      deptId: user.deptId ?? user.dept?.deptId ?? (user.dept as { id?: number } | undefined)?.id ?? null,
+      gender: user.gender,
+      deptId: user.deptId,
       status: user.status,
       remark: user.remark ?? "",
-      roleIds: user.userRoles?.map((item) => item.roleId) ?? [],
-      postIds: user.userPosts?.map((item) => item.postId) ?? [],
+      roleIds: user.roles.map((item) => item.id),
+      postIds: user.posts.map((item) => item.id),
     };
   } catch {
     // 详情接口失败时，降级使用列表行数据
@@ -372,8 +372,8 @@ const resetFormFromRecord = () => {
       username: props.record.username ?? "",
       phone: props.record.phone ?? "",
       email: props.record.email ?? "",
-      gender: props.record.gender ?? 0,
-      deptId: props.record.dept?.deptId ?? (props.record.dept as { id?: number } | undefined)?.id ?? null,
+      gender: props.record.gender,
+      deptId: props.record.deptId,
       status: props.record.status,
       remark: props.record.remark ?? "",
       roleIds: [],
@@ -398,8 +398,8 @@ const buildPayload = async (): Promise<ICreateUserParams | IUpdateUserParams | n
     phone: formModel.value.phone.trim() || undefined,
     email: formModel.value.email.trim() || undefined,
     gender: formModel.value.gender,
-    deptId: formModel.value.deptId,
-    status: formModel.value.status as Status,
+    deptId: formModel.value.deptId ?? undefined,
+    status: formModel.value.status,
     remark: formModel.value.remark.trim() || undefined,
     roleIds: formModel.value.roleIds,
     postIds: formModel.value.postIds,
@@ -407,7 +407,7 @@ const buildPayload = async (): Promise<ICreateUserParams | IUpdateUserParams | n
 
   if (props.mode === "create") {
     const password = formModel.value.password.trim();
-    const { publicKey } = await GetPublicEncryptKey();
+    const publicKey = await GetPublicEncryptKey();
     const encryptedPassword = Encrypt(password, publicKey);
     if (!encryptedPassword) {
       message.error("密码加密失败");

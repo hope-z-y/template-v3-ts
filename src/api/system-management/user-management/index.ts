@@ -5,8 +5,8 @@ import type {
   IUserDetail,
   IUserList,
   IQueryUserParams,
+  IResetUserPasswordParams,
   IUpdateUserParams,
-  IUser,
 } from "../../types";
 
 /**
@@ -15,7 +15,7 @@ import type {
  * @returns 分页用户列表
  */
 export const GetUserList = (params: IQueryUserParams) => {
-  return request.get<string, IUserList>("/system/users", { params });
+  return request.get<string, IUserList>("/system/user", { params });
 };
 
 /**
@@ -23,7 +23,7 @@ export const GetUserList = (params: IQueryUserParams) => {
  * @returns 全部用户列表
  */
 export const GetAllUsers = () => {
-  return request.get<string, IGetAllUsersResponse>("/system/users/all");
+  return request.get<string, IGetAllUsersResponse>("/system/user/all");
 };
 
 /**
@@ -31,8 +31,8 @@ export const GetAllUsers = () => {
  * @param id 用户 ID
  * @returns 用户详情（含角色、岗位关联）
  */
-export const GetUserById = (id: number) => {
-  return request.get<string, IUserDetail>(`/system/users/${id}`);
+export const GetUserById = (id: string) => {
+  return request.get<string, IUserDetail>(`/system/user/${id}`);
 };
 
 /**
@@ -41,7 +41,7 @@ export const GetUserById = (id: number) => {
  * @returns 创建后的用户详情
  */
 export const CreateUser = (data: ICreateUserParams) => {
-  return request.post<string, IUser>("/system/users", data);
+  return request.post<string, string>("/system/user", data);
 };
 
 /**
@@ -50,8 +50,8 @@ export const CreateUser = (data: ICreateUserParams) => {
  * @param data 请求体
  * @returns 更新后的用户详情
  */
-export const UpdateUser = (id: number, data: IUpdateUserParams) => {
-  return request.patch<string, IUser>(`/system/users/${id}`, data);
+export const UpdateUser = (id: string, data: IUpdateUserParams) => {
+  return request.patch<string, string>(`/system/user/${id}`, data);
 };
 
 /**
@@ -59,8 +59,8 @@ export const UpdateUser = (id: number, data: IUpdateUserParams) => {
  * @param id 用户 ID
  * @returns 无业务数据
  */
-export const DeleteUser = (id: number) => {
-  return request.delete<string, null>(`/system/users/${id}`);
+export const DeleteUser = (id: string) => {
+  return request.delete<string, string>(`/system/user/${id}`);
 };
 
 /**
@@ -69,6 +69,6 @@ export const DeleteUser = (id: number) => {
  * @param data RSA 加密后的新密码
  * @returns 更新后的用户详情
  */
-export const ResetUserPassword = (id: number, data: Pick<IUpdateUserParams, "password">) => {
-  return request.patch<string, IUserDetail>(`/system/users/${id}`, data);
+export const ResetUserPassword = (id: string, data: IResetUserPasswordParams) => {
+  return request.patch<string, string>(`/system/user/${id}/password`, data);
 };

@@ -1,42 +1,13 @@
-import type { IAuthTokenResponse, IUser, IUserProfile } from "@/api/types";
+import type { IAuthTokenResponse, IProfileUserInfo, IUserProfile } from "@/api/types";
 import { fetchRefreshToken } from "@/request/modules/refresh-token";
 import { useMenuStore } from "@/stores/menu";
 import { useMenuTagStore } from "@/stores/menu-tag";
-import { STORE_KEY } from "@/utils/modules/store-key";
+import { STORE_KEY } from "@/utils";
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 
 type AuthStorageStrategy = "memory-refresh" | "legacy-localStorage";
 type PermissionMode = "some" | "every";
-type RoleLike =
-  | string
-  | {
-      roleCode?: unknown;
-      code?: unknown;
-      value?: unknown;
-      role?: RoleLike | null;
-    };
-type PermissionLike =
-  | string
-  | {
-      permission?: unknown;
-      perms?: unknown;
-      code?: unknown;
-      value?: unknown;
-    };
-type ProfileLike = IUserProfile & {
-  isAdmin?: boolean;
-  superAdmin?: boolean;
-  roles?: RoleLike[];
-  permissions?: PermissionLike[];
-  user?: IUser & {
-    isAdmin?: boolean;
-    superAdmin?: boolean;
-    roles?: RoleLike[];
-    userRoles?: RoleLike[];
-    permissions?: PermissionLike[];
-  };
-};
 
 /**
  * Token 存储策略：
@@ -45,12 +16,6 @@ type ProfileLike = IUserProfile & {
  */
 const AUTH_STORAGE_STRATEGY: AuthStorageStrategy =
   import.meta.env.VITE_AUTH_STORAGE_STRATEGY === "legacy-localStorage" ? "legacy-localStorage" : "memory-refresh";
-
-/**
- * 是否信任菜单树中的按钮权限。
- * 默认 false：以 /auth/profile.permissions 为权限唯一可信来源，避免未过滤的菜单树误授按钮权限。
- */
-const TRUST_MENU_PERMISSIONS = import.meta.env.VITE_TRUST_MENU_PERMISSIONS === "true";
 
 const canUseStorage = () => typeof window !== "undefined";
 
@@ -106,57 +71,14 @@ const normalizeList = (items?: Array<string | undefined | null>) => {
   return Array.from(new Set(normalized));
 };
 
-const readStringField = (source: object, keys: string[]) => {
-  for (const key of keys) {
-    const value = (source as Record<string, unknown>)[key];
-    if (typeof value === "string" && value.trim()) {
-      return value;
-    }
-  }
-
-  return undefined;
-};
-
-/** 后端常见返回结构不完全一致，这里把角色统一收敛为 roleCode 字符串。 */
-const getRoleCode = (item: RoleLike): string | undefined => {
-  if (typeof item === "string") return item;
-  if (!item || typeof item !== "object") return undefined;
-
-  const direct = readStringField(item, ["roleCode", "code", "value"]);
-  if (direct) return direct;
-
-  return item.role ? getRoleCode(item.role) : undefined;
-};
-
-/** 权限字段常见命名有 permission/perms/code，这里统一收敛为权限标识字符串。 */
-const getPermissionCode = (item: PermissionLike): string | undefined => {
-  if (typeof item === "string") return item;
-  if (!item || typeof item !== "object") return undefined;
-
-  return readStringField(item, ["permission", "perms", "code", "value"]);
-};
-
+/** Profile 只接受当前后端契约，角色标识直接读取 userInfo.roles[].roleKey。 */
 const normalizeRolesFromProfile = (profile: IUserProfile) => {
-  const profileLike = profile as ProfileLike;
-  const roleCodes = [
-    ...(profileLike.roles ?? []).map(getRoleCode),
-    ...(profileLike.user?.roles ?? []).map(getRoleCode),
-    ...(profileLike.user?.userRoles ?? []).map(getRoleCode),
-  ];
-
-  if (profileLike.isAdmin || profileLike.superAdmin || profileLike.user?.isAdmin || profileLike.user?.superAdmin) {
+  const roleCodes = profile.userInfo.roles.map((role) => role.roleKey);
+  if (profile.userInfo.isAdmin) {
     roleCodes.push("admin");
   }
 
   return normalizeList(roleCodes);
-};
-
-const normalizePermissionsFromProfile = (profile: IUserProfile) => {
-  const profileLike = profile as ProfileLike;
-  return normalizeList([
-    ...(profileLike.permissions ?? []).map(getPermissionCode),
-    ...(profileLike.user?.permissions ?? []).map(getPermissionCode),
-  ]);
 };
 
 /** mode 为 some 时满足任意一个即可；every 时必须全部拥有。 */
@@ -178,18 +100,13 @@ export const useUserStore = defineStore(STORE_KEY.UserStore, () => {
   /** 刷新 Token：按策略保存，默认 sessionStorage */
   const refreshToken = ref(readStoredRefreshToken());
 
-  const userInfo = ref<IUser>();
+  const userInfo = ref<IProfileUserInfo>();
   const roles = ref<string[]>([]);
   const profilePermissions = ref<string[]>([]);
-  const menuPermissions = ref<string[]>([]);
   const profileLoaded = ref(false);
 
-  // profile 权限来自 /auth/profile，是默认可信来源；菜单权限只有显式开启信任时才会合并。
-  const permissions = computed(() =>
-    normalizeList(
-      TRUST_MENU_PERMISSIONS ? [...profilePermissions.value, ...menuPermissions.value] : profilePermissions.value,
-    ),
-  );
+  // 后端已在 profile.permissions 返回完整权限，菜单树不再承担按钮授权职责。
+  const permissions = computed(() => profilePermissions.value);
 
   const setTokens = (tokens: IAuthTokenResponse) => {
     accessToken.value = tokens.accessToken;
@@ -198,14 +115,10 @@ export const useUserStore = defineStore(STORE_KEY.UserStore, () => {
   };
 
   const setProfile = (profile: IUserProfile) => {
-    userInfo.value = profile.user;
+    userInfo.value = profile.userInfo;
     roles.value = normalizeRolesFromProfile(profile);
-    profilePermissions.value = normalizePermissionsFromProfile(profile);
+    profilePermissions.value = normalizeList(profile.permissions);
     profileLoaded.value = true;
-  };
-
-  const setMenuPermissions = (items: string[]) => {
-    menuPermissions.value = normalizeList(items);
   };
 
   const hasPermission = (permission: string | string[], mode: PermissionMode = "some") => {
@@ -224,7 +137,6 @@ export const useUserStore = defineStore(STORE_KEY.UserStore, () => {
     userInfo.value = undefined;
     roles.value = [];
     profilePermissions.value = [];
-    menuPermissions.value = [];
     profileLoaded.value = false;
     clearStoredTokens();
   };
@@ -243,6 +155,8 @@ export const useUserStore = defineStore(STORE_KEY.UserStore, () => {
     // 动态导入避免 store 初始化时过早加载 API 模块，降低循环依赖风险。
     const { GetCurrentUser } = await import("@/api/auth");
     const profile = await GetCurrentUser();
+    // 一个 Profile 响应同时驱动用户权限和动态路由，避免重复请求造成状态不一致。
+    await useMenuStore().initRoutes(profile.menus);
     setProfile(profile);
   };
 
@@ -264,7 +178,7 @@ export const useUserStore = defineStore(STORE_KEY.UserStore, () => {
     try {
       if (accessToken.value) {
         const { SignOut } = await import("@/api/auth");
-        await SignOut();
+        await SignOut({ refreshToken: refreshToken.value });
       }
     } catch {
       // 退出接口失败仍清理本地会话
@@ -287,7 +201,6 @@ export const useUserStore = defineStore(STORE_KEY.UserStore, () => {
     profileLoaded,
     setTokens,
     setProfile,
-    setMenuPermissions,
     hasPermission,
     hasRole,
     clearAuth,

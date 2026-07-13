@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { useGlobalConfig } from "@/hooks";
 import { useMenuStore } from "@/stores";
-import { findMenuOptionByKey, getFluentIconComponent, type RouteMenuOption } from "@/utils";
+import { FindMenuOptionByKey, GetAntdIconComponent, type RouteMenuOption } from "@/utils";
 import { NIcon, NMenu, NGradientText, type MenuOption } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { computed, h } from "vue";
@@ -41,7 +41,7 @@ const activeKey = computed(() => route.path);
  * 目录节点仅展开不跳转；外链在新标签页打开。
  */
 const handleMenuUpdate = (key: string) => {
-  const option = findMenuOptionByKey(rawMenus.value, key);
+  const option = FindMenuOptionByKey(rawMenus.value, key);
   if (!option?.navigable) return;
 
   if ("href" in option && option.href) {
@@ -65,11 +65,11 @@ const renderMenuLabel = (option: MenuOption) => {
   return option.label as string;
 };
 
-/** 仅当接口返回的 icon 为有效 Fluent 24Regular 名称时渲染图标 */
+/** 接口返回有效的 Ant Design 图标组件名时渲染菜单图标 */
 const renderMenuIcon = (option: MenuOption) => {
-  const icon = getFluentIconComponent((option as RouteMenuOption).iconName);
+  const icon = GetAntdIconComponent((option as RouteMenuOption).iconName);
   if (!icon) return null;
-  return h(NIcon, null, { default: () => h(icon) });
+  return h(NIcon, { component: icon });
 };
 </script>
 

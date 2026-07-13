@@ -20,7 +20,7 @@
     </template>
 
     <template #toolbar>
-      <Permission value="system:menu:add">
+      <Permission value="system:menu:create">
         <NButton type="primary" @click="handleCreate">
           <template #icon>
             <NIcon :component="Add24Regular" />
@@ -39,7 +39,8 @@
         :row-key="(row) => row.id"
         children-key="children"
         default-expand-all
-        :max-height="maxHeight - 20"
+        :max-height="maxHeight - 50"
+        bordered
         striped
       />
     </template>
@@ -52,8 +53,7 @@
 import { DeleteMenu, GetMenuTree } from "@/api/system-management";
 import type { IMenu } from "@/api/types";
 import { Page, Permission, SearchForm, type PageColumnOption } from "@/components";
-import { useMenuStore } from "@/stores";
-import { normalizeMenuTree } from "@/utils";
+import { useUserStore } from "@/stores";
 import Add24Regular from "@vicons/fluent/es/Add24Regular";
 import {
   NButton,
@@ -77,7 +77,7 @@ interface MenuQuery {
 
 const message = useMessage();
 const dialog = useDialog();
-const menuStore = useMenuStore();
+const userStore = useUserStore();
 const adminMenuTree = ref<IMenu[]>([]);
 const loading = ref(false);
 
@@ -149,8 +149,9 @@ const fetchTree = async () => {
   try {
     loading.value = true;
     const data = await GetMenuTree();
-    adminMenuTree.value = normalizeMenuTree(data);
-    await menuStore.initRoutes(true);
+    adminMenuTree.value = data;
+    // 管理端菜单修改后重新获取 Profile，让侧边栏和当前用户实际可见菜单保持一致。
+    await userStore.loadProfile(true);
   } catch {
     adminMenuTree.value = [];
   } finally {
@@ -171,8 +172,8 @@ const columnOptions = ref<PageColumnOption[]>([
   { key: "menuName", title: "菜单名称", visible: true },
   { key: "menuType", title: "类型", visible: true },
   { key: "sort", title: "排序", visible: true },
-  { key: "permission", title: "权限标识", visible: true },
-  { key: "path", title: "路由地址", visible: true },
+  { key: "permissionCode", title: "权限标识", visible: true },
+  { key: "routePath", title: "路由地址", visible: true },
   { key: "status", title: "状态", visible: true },
   { key: "actions", title: "操作", visible: true, disabled: true },
 ]);

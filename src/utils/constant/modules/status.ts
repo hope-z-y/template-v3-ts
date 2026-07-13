@@ -1,5 +1,7 @@
 export type NaiveType = "default" | "primary" | "success" | "info" | "warning" | "error";
 
+// #region 状态
+
 /** 状态 */
 export const Status = {
   /** 禁用 */
@@ -17,3 +19,4 @@ export const StatusMap = new Map<Status, Option>([
   [Status.Disable, { label: "禁用", value: Status.Disable, type: "error" }],
   [Status.Enable, { label: "启用", value: Status.Enable, type: "success" }],
 ]);
+// #endregion

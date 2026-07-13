@@ -1,5 +1,5 @@
-import type { IMenu } from "@/api/types";
-import { collectRouteNames, CONTAINER_ROUTE_NAME, menusToRoutes } from "@/utils/modules/menu-to-routes";
+import type { IProfileMenu } from "@/api/types";
+import { CollectRouteNames, CONTAINER_ROUTE_NAME, MenusToRoutes } from "@/utils";
 import type { Router } from "vue-router";
 
 const registeredRouteNames = new Set<string>();
@@ -8,13 +8,13 @@ const registeredRouteNames = new Set<string>();
 export const isDynamicRoutesRegistered = () => registeredRouteNames.size > 0;
 
 /** 根据菜单树注册动态路由到 Container 下 */
-export const registerDynamicRoutes = (router: Router, menuTree: IMenu[]) => {
+export const registerDynamicRoutes = (router: Router, menuTree: IProfileMenu[]) => {
   resetDynamicRoutes(router);
 
-  const routes = menusToRoutes(menuTree);
+  const routes = MenusToRoutes(menuTree);
   routes.forEach((route) => {
     router.addRoute(CONTAINER_ROUTE_NAME, route);
-    collectRouteNames([route]).forEach((name) => registeredRouteNames.add(name));
+    CollectRouteNames([route]).forEach((name) => registeredRouteNames.add(name));
   });
 };
 

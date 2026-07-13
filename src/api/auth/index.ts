@@ -1,11 +1,11 @@
 import { request } from "@/request";
 import type {
   ICaptchaResponse,
-  IGetUserMenusResponse,
   IRefreshTokenParams,
   IRefreshTokenResponse,
   ISignInParams,
   ISignInResponse,
+  ISignOutParams,
   IUserProfile,
 } from "../types";
 
@@ -22,8 +22,8 @@ export const SignIn = (data: ISignInParams) => {
  * 退出登录（需携带 accessToken）
  * @returns 无业务数据
  */
-export const SignOut = () => {
-  return request.post<string, null>("/auth/logout");
+export const SignOut = (data: ISignOutParams) => {
+  return request.post<string, null>("/auth/logout", data);
 };
 
 /**
@@ -52,16 +52,9 @@ export const RefreshToken = (data: IRefreshTokenParams) => {
 };
 
 /**
- * 获取当前登录用户可见的菜单树（按角色过滤）
- * @returns 菜单树，用于动态路由与侧边栏
- */
-export const GetUserMenus = () => {
-  return request.get<string, IGetUserMenusResponse>("/auth/menus");
-};
-
-/**
- * 获取当前登录用户信息、角色与权限标识
- * @returns 当前用户权限上下文
+ * 一次获取当前用户、权限和动态菜单。
+ * 登录成功或恢复会话后只需要调用这个接口，不再单独请求菜单。
+ * @returns 当前用户完整的登录上下文
  */
 export const GetCurrentUser = () => {
   return request.get<string, IUserProfile>("/auth/profile");

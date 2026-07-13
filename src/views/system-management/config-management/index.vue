@@ -4,17 +4,17 @@
   <Page v-model:column-options="columnOptions" title="参数设置" @refresh="getConfigList">
     <template #search>
       <SearchForm :model="query" :columns="3" @search="handleSearch" @reset="handleReset">
-        <NFormItem label="参数名称" path="configName">
-          <NInput v-model:value="query.configName" placeholder="请输入参数名称" clearable />
+        <NFormItem label="参数名称" path="paramName">
+          <NInput v-model:value="query.paramName" placeholder="请输入参数名称" clearable />
         </NFormItem>
-        <NFormItem label="参数键名" path="configKey">
-          <NInput v-model:value="query.configKey" placeholder="请输入参数键名" clearable />
+        <NFormItem label="参数键名" path="paramKey">
+          <NInput v-model:value="query.paramKey" placeholder="请输入参数键名" clearable />
         </NFormItem>
       </SearchForm>
     </template>
 
     <template #toolbar>
-      <Permission value="system:config:add">
+      <Permission value="system:parameter:create">
         <NButton type="primary" @click="handleCreate">
           <template #icon>
             <NIcon :component="Add24Regular" />
@@ -58,14 +58,11 @@ import ConfigForm from "./modules/form.vue";
 const message = useMessage();
 const { confirmDelete } = useDeleteConfirm();
 
-interface ConfigQuery {
-  configName?: string;
-  configKey?: string;
-}
+type ConfigQuery = Pick<IQueryConfigParams, "paramName" | "paramKey">;
 
 const createDefaultQuery = (): ConfigQuery => ({
-  configName: undefined,
-  configKey: undefined,
+  paramName: undefined,
+  paramKey: undefined,
 });
 
 const query = reactive<ConfigQuery>(createDefaultQuery());
@@ -76,11 +73,11 @@ const buildQueryParams = (page: number, pageSize: number): IQueryConfigParams =>
     pageSize,
   };
 
-  const configName = query.configName?.trim();
-  const configKey = query.configKey?.trim();
+  const paramName = query.paramName?.trim();
+  const paramKey = query.paramKey?.trim();
 
-  if (configName) params.configName = configName;
-  if (configKey) params.configKey = configKey;
+  if (paramName) params.paramName = paramName;
+  if (paramKey) params.paramKey = paramKey;
 
   return params;
 };
@@ -115,13 +112,13 @@ const {
 } = useCrudDialog<IConfigRow>();
 
 const handleDelete = (row: IConfigRow) => {
-  if (Number(row.configType) === 1) {
+  if (row.paramType === "system") {
     message.warning("内置参数不允许删除");
     return;
   }
 
   confirmDelete({
-    content: `确定要删除参数「${row.configName}」吗？`,
+    content: `确定要删除参数「${row.paramName}」吗？`,
     onDelete: async () => {
       await DeleteConfig(row.id);
     },
@@ -131,14 +128,14 @@ const handleDelete = (row: IConfigRow) => {
 
 const { columnOptions, visibleKeys } = useColumnVisibility(
   [
-    { key: "configName", title: "参数名称", visible: true },
-    { key: "configKey", title: "参数键名", visible: true },
-    { key: "configValue", title: "参数键值", visible: true },
-    { key: "configType", title: "系统内置", visible: true },
+    { key: "paramName", title: "参数名称", visible: true },
+    { key: "paramKey", title: "参数键名", visible: true },
+    { key: "paramValue", title: "参数键值", visible: true },
+    { key: "paramType", title: "参数类型", visible: true },
     { key: "createdAt", title: "创建时间", visible: true },
     { key: "actions", title: "操作", visible: true, disabled: true },
   ],
-  "system:config:columns",
+  "system:parameter:columns",
 );
 
 const columns = computed<DataTableColumns<IConfigRow>>(() => {

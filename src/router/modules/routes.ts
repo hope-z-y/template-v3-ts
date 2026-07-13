@@ -29,7 +29,7 @@ export const staticRoutes: RouteRecordRaw[] = [
         path: "home",
         name: "Home",
         component: () => import("@/views/home/index.vue"),
-        meta: { title: "首页", icon: "Home24Regular", affixed: true },
+        meta: { title: "首页", icon: "HomeOutlined", affixed: true },
       },
     ],
   },

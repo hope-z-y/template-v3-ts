@@ -25,15 +25,6 @@
         <NFormItem label="邮箱" path="email">
           <NInput v-model:value="query.email" placeholder="请输入邮箱" clearable />
         </NFormItem>
-        <NFormItem label="性别" path="gender">
-          <NSelect
-            v-model:value="query.gender"
-            :options="genderOptions"
-            placeholder="请选择性别"
-            clearable
-            class="w-full"
-          />
-        </NFormItem>
         <NFormItem label="状态" path="status">
           <NSelect
             v-model:value="query.status"
@@ -62,7 +53,7 @@
 
     <!-- 工具栏：新增、批量删除、导入、导出 -->
     <template #toolbar>
-      <Permission value="system:user:add">
+      <Permission value="system:user:create">
         <NButton type="primary" @click="handleCreate">
           <template #icon>
             <NIcon :component="Add24Regular" />
@@ -115,7 +106,6 @@ import { DeleteUser, GetDeptTree, GetUserList } from "@/api/system-management";
 import type { IDept, IQueryUserParams } from "@/api/types";
 import { Page, Permission, SearchForm, type PageColumnOption } from "@/components";
 import { useColumnVisibility, useCrudDialog } from "@/hooks";
-import type { Status } from "@/utils";
 import Add24Regular from "@vicons/fluent/es/Add24Regular";
 import Delete24Regular from "@vicons/fluent/es/Delete24Regular";
 import {
@@ -132,7 +122,7 @@ import {
   type TreeSelectOption,
 } from "naive-ui";
 import { computed, onMounted, reactive, ref } from "vue";
-import { createUserColumns, genderOptions, statusOptions, type IUserRow } from "./data";
+import { createUserColumns, statusOptions, type IUserRow } from "./data";
 import ResetPassword from "./modules/reset-password.vue";
 import UserForm from "./modules/form.vue";
 // #endregion
@@ -149,9 +139,8 @@ interface UserQuery {
   username?: string;
   phone?: string;
   email?: string;
-  gender?: number;
-  status?: number;
-  deptId?: number | null;
+  status?: IQueryUserParams["status"];
+  deptId?: string | null;
 }
 
 const createDefaultQuery = (): UserQuery => ({
@@ -159,7 +148,6 @@ const createDefaultQuery = (): UserQuery => ({
   username: undefined,
   phone: undefined,
   email: undefined,
-  gender: undefined,
   status: undefined,
   deptId: null,
 });
@@ -208,9 +196,8 @@ const buildQueryParams = (): IQueryUserParams => {
   if (username) params.username = username;
   if (phone) params.phone = phone;
   if (email) params.email = email;
-  if (query.gender !== undefined && query.gender !== null) params.gender = query.gender;
-  if (query.status !== undefined && query.status !== null) params.status = query.status as Status;
-  if (query.deptId !== undefined && query.deptId !== null) params.deptId = query.deptId;
+  if (query.status) params.status = query.status;
+  if (query.deptId) params.deptId = [query.deptId];
 
   return params;
 };
@@ -326,7 +313,7 @@ const handleMultiDelete = () => {
     negativeText: "取消",
     onPositiveClick: async () => {
       try {
-        await Promise.all(checkedRowKeys.value.map((id) => DeleteUser(Number(id))));
+        await Promise.all(checkedRowKeys.value.map((id) => DeleteUser(String(id))));
         message.success("批量删除成功");
         await getUserList();
       } catch {

@@ -7,7 +7,7 @@ import type { IGetLoginLogListResponse, ILoginLog, IQueryLoginLogParams } from "
  * @returns 分页登录日志列表
  */
 export const GetLoginLogList = (params: IQueryLoginLogParams) => {
-  return request.get<string, IGetLoginLogListResponse>("/monitor/login-logs", { params });
+  return request.get<string, IGetLoginLogListResponse>("/system/login-log", { params });
 };
 
 /**
@@ -15,8 +15,8 @@ export const GetLoginLogList = (params: IQueryLoginLogParams) => {
  * @param id 登录日志 ID
  * @returns 登录日志详情
  */
-export const GetLoginLogById = (id: number) => {
-  return request.get<string, ILoginLog>(`/monitor/login-logs/${id}`);
+export const GetLoginLogById = (id: string) => {
+  return request.get<string, ILoginLog>(`/system/login-log/${id}`);
 };
 
 /**
@@ -24,7 +24,7 @@ export const GetLoginLogById = (id: number) => {
  * @returns 无业务数据
  */
 export const CleanLoginLogs = () => {
-  return request.delete<string, null>("/monitor/login-logs/clean");
+  return request.delete<string, null>("/system/login-log/clean");
 };
 
 /**
@@ -32,6 +32,6 @@ export const CleanLoginLogs = () => {
  * @param id 登录日志 ID
  * @returns 无业务数据
  */
-export const DeleteLoginLog = (id: number) => {
-  return request.delete<string, null>(`/monitor/login-logs/${id}`);
+export const DeleteLoginLog = (id: string) => {
+  return request.delete<string, string>(`/system/login-log/${id}`);
 };

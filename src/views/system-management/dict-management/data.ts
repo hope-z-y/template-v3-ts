@@ -1,6 +1,6 @@
-import type { IAuditable, IDictData, IDictType } from "@/api/types";
+import type { IDictData, IDictType } from "@/api/types";
 import { useUserStore } from "@/stores";
-import { RenderColumnTitle, StatusMap, type NaiveType, type Status } from "@/utils";
+import { RenderColumnTitle, type NaiveType } from "@/utils";
 import Book24Regular from "@vicons/fluent/es/Book24Regular";
 import CalendarLtr24Regular from "@vicons/fluent/es/CalendarLtr24Regular";
 import Delete24Regular from "@vicons/fluent/es/Delete24Regular";
@@ -11,17 +11,17 @@ import TextNumberFormat24Regular from "@vicons/fluent/es/TextNumberFormat24Regul
 import { NButton, NIcon, NSpace, NTag, type DataTableColumns } from "naive-ui";
 import { h, type Component } from "vue";
 
-export type IDictTypeRow = IDictType & IAuditable;
-export type IDictDataRow = IDictData & IAuditable;
+export type IDictTypeRow = IDictType;
+export type IDictDataRow = IDictData;
 
 export const statusOptions = [
-  { label: "启用", value: 1 },
-  { label: "禁用", value: 0 },
+  { label: "启用", value: "enabled" },
+  { label: "禁用", value: "disabled" },
 ];
 
 export const isDefaultOptions = [
-  { label: "是", value: 1 },
-  { label: "否", value: 0 },
+  { label: "是", value: true },
+  { label: "否", value: false },
 ];
 
 const renderActionButton = (label: string, icon: Component, type: NaiveType, onClick: () => void) => {
@@ -72,7 +72,10 @@ export const createDictTypeColumns = (handlers: IDictTypeColumnHandlers): DataTa
       align: "center",
       titleAlign: "center",
       render: (row) => {
-        const current = StatusMap.get(row.status as Status) ?? { label: "未知", type: "error" };
+        const current =
+          row.status === "enabled"
+            ? { label: "启用", type: "success" as const }
+            : { label: "禁用", type: "error" as const };
         return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
       },
     },
@@ -90,10 +93,10 @@ export const createDictTypeColumns = (handlers: IDictTypeColumnHandlers): DataTa
           {
             default: () =>
               [
-                userStore.hasPermission("system:dict:edit")
+                userStore.hasPermission("system:dict-type:update")
                   ? renderActionButton("编辑", Edit24Regular, "primary", () => handlers.onEdit(row))
                   : null,
-                userStore.hasPermission("system:dict:delete")
+                userStore.hasPermission("system:dict-type:delete")
                   ? renderActionButton("删除", Delete24Regular, "error", () => handlers.onDelete(row))
                   : null,
               ].filter(Boolean),
@@ -125,7 +128,7 @@ export const createDictDataColumns = (handlers: IDictDataColumnHandlers): DataTa
     },
     {
       title: RenderColumnTitle(TextNumberFormat24Regular, "排序"),
-      key: "dictSort",
+      key: "sort",
       width: 80,
       align: "center",
       titleAlign: "center",
@@ -137,7 +140,10 @@ export const createDictDataColumns = (handlers: IDictDataColumnHandlers): DataTa
       align: "center",
       titleAlign: "center",
       render: (row) => {
-        const current = StatusMap.get(row.status as Status) ?? { label: "未知", type: "error" };
+        const current =
+          row.status === "enabled"
+            ? { label: "启用", type: "success" as const }
+            : { label: "禁用", type: "error" as const };
         return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
       },
     },
@@ -162,10 +168,10 @@ export const createDictDataColumns = (handlers: IDictDataColumnHandlers): DataTa
           {
             default: () =>
               [
-                userStore.hasPermission("system:dict:edit")
+                userStore.hasPermission("system:dict-data:update")
                   ? renderActionButton("编辑", Edit24Regular, "primary", () => handlers.onEdit(row))
                   : null,
-                userStore.hasPermission("system:dict:delete")
+                userStore.hasPermission("system:dict-data:delete")
                   ? renderActionButton("删除", Delete24Regular, "error", () => handlers.onDelete(row))
                   : null,
               ].filter(Boolean),

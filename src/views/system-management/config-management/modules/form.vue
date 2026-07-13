@@ -4,34 +4,34 @@
   <NModal
     v-model:show="visible"
     preset="dialog"
-    style="width: 520px"
+    style="width: 40vw"
     :title="mode === 'create' ? '新增参数' : '编辑参数'"
     :mask-closable="false"
     :show-icon="false"
     @after-leave="handleAfterLeave"
   >
     <NForm ref="formRef" :model="formModel" :rules="rules" label-placement="left" label-width="80">
-      <NFormItem label="参数名称" path="configName">
+      <NFormItem label="参数名称" path="paramName">
         <NInput
-          v-model:value="formModel.configName"
+          v-model:value="formModel.paramName"
           placeholder="请输入参数名称"
           maxlength="50"
           show-count
           :disabled="isBuiltIn"
         />
       </NFormItem>
-      <NFormItem label="参数键名" path="configKey">
+      <NFormItem label="参数键名" path="paramKey">
         <NInput
-          v-model:value="formModel.configKey"
+          v-model:value="formModel.paramKey"
           placeholder="请输入参数键名"
           maxlength="50"
           show-count
           :disabled="mode === 'edit' || isBuiltIn"
         />
       </NFormItem>
-      <NFormItem label="参数键值" path="configValue">
+      <NFormItem label="参数键值" path="paramValue">
         <NInput
-          v-model:value="formModel.configValue"
+          v-model:value="formModel.paramValue"
           type="textarea"
           placeholder="请输入参数键值"
           maxlength="500"
@@ -39,8 +39,8 @@
           :autosize="{ minRows: 2, maxRows: 4 }"
         />
       </NFormItem>
-      <NFormItem v-if="mode === 'create'" label="系统内置" path="configType">
-        <NRadioGroup v-model:value="formModel.configType">
+      <NFormItem label="参数类型" path="paramType">
+        <NRadioGroup v-model:value="formModel.paramType">
           <NSpace>
             <NRadio v-for="item in configTypeOptions" :key="item.value" :value="item.value">
               {{ item.label }}
@@ -89,18 +89,20 @@ import { computed, ref, watch } from "vue";
 import { configTypeOptions, type IConfigRow } from "../data";
 
 interface ConfigFormModel {
-  configName: string;
-  configKey: string;
-  configValue: string;
-  configType: number;
+  paramName: string;
+  paramKey: string;
+  paramValue: string;
+  paramType: "system" | "business";
+  isEncrypted: boolean;
   remark: string;
 }
 
 const createDefaultForm = (): ConfigFormModel => ({
-  configName: "",
-  configKey: "",
-  configValue: "",
-  configType: 0,
+  paramName: "",
+  paramKey: "",
+  paramValue: "",
+  paramType: "business",
+  isEncrypted: false,
   remark: "",
 });
 
@@ -117,12 +119,12 @@ const formRef = ref<FormInst | null>(null);
 const submitting = ref(false);
 const formModel = ref<ConfigFormModel>(createDefaultForm());
 
-const isBuiltIn = computed(() => props.mode === "edit" && Number(props.record?.configType) === 1);
+const isBuiltIn = computed(() => props.mode === "edit" && props.record?.paramType === "system");
 
 const rules: FormRules = {
-  configName: [{ required: true, message: "请输入参数名称", trigger: ["input", "blur"] }],
-  configKey: [{ required: true, message: "请输入参数键名", trigger: ["input", "blur"] }],
-  configValue: [{ required: true, message: "请输入参数键值", trigger: ["input", "blur"] }],
+  paramName: [{ required: true, message: "请输入参数名称", trigger: ["input", "blur"] }],
+  paramKey: [{ required: true, message: "请输入参数键名", trigger: ["input", "blur"] }],
+  paramValue: [{ required: true, message: "请输入参数键值", trigger: ["input", "blur"] }],
 };
 
 const loadDetail = async () => {
@@ -131,10 +133,11 @@ const loadDetail = async () => {
   try {
     const detail = await GetConfigById(props.record.id);
     formModel.value = {
-      configName: detail.configName,
-      configKey: detail.configKey,
-      configValue: detail.configValue,
-      configType: detail.configType,
+      paramName: detail.paramName,
+      paramKey: detail.paramKey,
+      paramValue: detail.paramValue,
+      paramType: detail.paramType,
+      isEncrypted: detail.isEncrypted,
       remark: detail.remark ?? "",
     };
   } catch {
@@ -145,10 +148,11 @@ const loadDetail = async () => {
 const resetFormFromRecord = () => {
   if (props.mode === "edit" && props.record) {
     formModel.value = {
-      configName: props.record.configName,
-      configKey: props.record.configKey,
-      configValue: props.record.configValue,
-      configType: props.record.configType,
+      paramName: props.record.paramName,
+      paramKey: props.record.paramKey,
+      paramValue: props.record.paramValue,
+      paramType: props.record.paramType,
+      isEncrypted: props.record.isEncrypted,
       remark: props.record.remark ?? "",
     };
     return;
@@ -170,10 +174,11 @@ const handleSubmit = async () => {
   }
 
   const payload: ICreateConfigParams | IUpdateConfigParams = {
-    configName: formModel.value.configName.trim(),
-    configKey: formModel.value.configKey.trim(),
-    configValue: formModel.value.configValue.trim(),
-    configType: formModel.value.configType,
+    paramName: formModel.value.paramName.trim(),
+    paramKey: formModel.value.paramKey.trim(),
+    paramValue: formModel.value.paramValue.trim(),
+    paramType: formModel.value.paramType,
+    isEncrypted: formModel.value.isEncrypted,
     remark: formModel.value.remark.trim() || undefined,
   };
 

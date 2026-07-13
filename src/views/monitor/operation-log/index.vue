@@ -4,11 +4,11 @@
   <Page v-model:column-options="columnOptions" title="操作日志" @refresh="getOperLogList">
     <template #search>
       <SearchForm :model="query" :columns="3" @search="handleSearch" @reset="handleReset">
-        <NFormItem label="模块标题" path="title">
-          <NInput v-model:value="query.title" placeholder="请输入模块标题" clearable />
+        <NFormItem label="业务模块" path="module">
+          <NInput v-model:value="query.module" placeholder="请输入业务模块" clearable />
         </NFormItem>
-        <NFormItem label="操作人员" path="operName">
-          <NInput v-model:value="query.operName" placeholder="请输入操作人员" clearable />
+        <NFormItem label="操作人员" path="username">
+          <NInput v-model:value="query.username" placeholder="请输入操作人员" clearable />
         </NFormItem>
         <NFormItem label="操作状态" path="status">
           <NSelect
@@ -23,7 +23,7 @@
     </template>
 
     <template #toolbar>
-      <Permission value="monitor:operation-log:delete">
+      <Permission value="system:operation-log:delete">
         <NButton type="error" @click="handleClean">
           <template #icon>
             <NIcon :component="Delete24Regular" />
@@ -53,26 +53,25 @@
   <NDrawer v-model:show="detailVisible" :width="560" placement="right">
     <NDrawerContent title="操作日志详情" closable>
       <NDescriptions v-if="detailRecord" :column="1" label-placement="left">
-        <NDescriptionsItem label="模块标题">{{ detailRecord.title || "-" }}</NDescriptionsItem>
-        <NDescriptionsItem label="业务类型">{{ detailRecord.businessType ?? "-" }}</NDescriptionsItem>
+        <NDescriptionsItem label="业务模块">{{ detailRecord.module }}</NDescriptionsItem>
+        <NDescriptionsItem label="操作类型">{{ detailRecord.operationType }}</NDescriptionsItem>
         <NDescriptionsItem label="请求方法">{{ detailRecord.requestMethod || "-" }}</NDescriptionsItem>
-        <NDescriptionsItem label="操作人员">{{ detailRecord.operName || "-" }}</NDescriptionsItem>
-        <NDescriptionsItem label="部门">{{ detailRecord.deptName || "-" }}</NDescriptionsItem>
-        <NDescriptionsItem label="请求地址">{{ detailRecord.operUrl || "-" }}</NDescriptionsItem>
-        <NDescriptionsItem label="操作 IP">{{ detailRecord.operIp || "-" }}</NDescriptionsItem>
-        <NDescriptionsItem label="操作地点">{{ detailRecord.operLocation || "-" }}</NDescriptionsItem>
+        <NDescriptionsItem label="操作人员">{{ detailRecord.username || "-" }}</NDescriptionsItem>
+        <NDescriptionsItem label="请求地址">{{ detailRecord.requestUrl || "-" }}</NDescriptionsItem>
+        <NDescriptionsItem label="操作 IP">{{ detailRecord.requestIp || "-" }}</NDescriptionsItem>
+        <NDescriptionsItem label="操作地点">{{ detailRecord.requestLocation || "-" }}</NDescriptionsItem>
         <NDescriptionsItem label="操作状态">
-          {{ operStatusMap[Number(detailRecord.status)]?.label ?? "未知" }}
+          {{ operStatusMap[detailRecord.status]?.label ?? "未知" }}
         </NDescriptionsItem>
-        <NDescriptionsItem label="操作时间">{{ detailRecord.operTime }}</NDescriptionsItem>
+        <NDescriptionsItem label="操作时间">{{ detailRecord.operatedAt }}</NDescriptionsItem>
         <NDescriptionsItem label="请求参数">
-          <pre class="whitespace-pre-wrap break-all text-xs">{{ detailRecord.operParam || "-" }}</pre>
+          <pre class="whitespace-pre-wrap break-all text-xs">{{ detailRecord.requestParams || "-" }}</pre>
         </NDescriptionsItem>
         <NDescriptionsItem label="返回结果">
-          <pre class="whitespace-pre-wrap break-all text-xs">{{ detailRecord.jsonResult || "-" }}</pre>
+          <pre class="whitespace-pre-wrap break-all text-xs">{{ detailRecord.responseResult || "-" }}</pre>
         </NDescriptionsItem>
-        <NDescriptionsItem v-if="detailRecord.errorMsg" label="错误信息">
-          <pre class="whitespace-pre-wrap break-all text-xs text-red-500">{{ detailRecord.errorMsg }}</pre>
+        <NDescriptionsItem v-if="detailRecord.errorMessage" label="错误信息">
+          <pre class="whitespace-pre-wrap break-all text-xs text-red-500">{{ detailRecord.errorMessage }}</pre>
         </NDescriptionsItem>
       </NDescriptions>
     </NDrawerContent>
@@ -112,15 +111,11 @@ const message = useMessage();
 const dialog = useDialog();
 const { confirmDelete } = useDeleteConfirm();
 
-interface OperLogQuery {
-  title?: string;
-  operName?: string;
-  status?: number;
-}
+type OperLogQuery = Pick<IQueryOperLogParams, "module" | "username" | "status">;
 
 const createDefaultQuery = (): OperLogQuery => ({
-  title: undefined,
-  operName: undefined,
+  module: undefined,
+  username: undefined,
   status: undefined,
 });
 
@@ -134,11 +129,11 @@ const buildQueryParams = (page: number, pageSize: number): IQueryOperLogParams =
     pageSize,
   };
 
-  const title = query.title?.trim();
-  const operName = query.operName?.trim();
+  const module = query.module?.trim();
+  const username = query.username?.trim();
 
-  if (title) params.title = title;
-  if (operName) params.operName = operName;
+  if (module) params.module = module;
+  if (username) params.username = username;
   if (query.status !== undefined && query.status !== null) params.status = query.status;
 
   return params;
@@ -207,16 +202,15 @@ const handleClean = () => {
 // 列显隐持久化到本地，刷新页面后仍保留用户上次选择。
 const { columnOptions, visibleKeys } = useColumnVisibility(
   [
-    { key: "title", title: "模块标题", visible: true },
-    { key: "operName", title: "操作人员", visible: true },
-    { key: "deptName", title: "部门", visible: true },
-    { key: "operUrl", title: "请求地址", visible: true },
-    { key: "operIp", title: "操作 IP", visible: true },
+    { key: "module", title: "业务模块", visible: true },
+    { key: "username", title: "操作人员", visible: true },
+    { key: "requestUrl", title: "请求地址", visible: true },
+    { key: "requestIp", title: "操作 IP", visible: true },
     { key: "status", title: "操作状态", visible: true },
-    { key: "operTime", title: "操作时间", visible: true },
+    { key: "operatedAt", title: "操作时间", visible: true },
     { key: "actions", title: "操作", visible: true, disabled: true },
   ],
-  "monitor:operation-log:columns",
+  "system:operation-log:columns",
 );
 
 const columns = computed<DataTableColumns<IOperLog>>(() => {

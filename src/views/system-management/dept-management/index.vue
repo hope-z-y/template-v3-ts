@@ -20,7 +20,7 @@
     </template>
 
     <template #toolbar>
-      <Permission value="system:dept:add">
+      <Permission value="system:department:create">
         <NButton type="primary" @click="handleCreate">
           <template #icon>
             <NIcon>
@@ -164,7 +164,7 @@ const handleReset = () => {
 const columnOptions = ref<PageColumnOption[]>([
   { key: "deptName", title: "部门名称", visible: true },
   { key: "sort", title: "显示顺序", visible: true },
-  { key: "leader", title: "负责人", visible: true },
+  { key: "leaderUserId", title: "负责人", visible: true },
   { key: "phone", title: "联系电话", visible: true },
   { key: "email", title: "邮箱", visible: true },
   { key: "status", title: "状态", visible: true },

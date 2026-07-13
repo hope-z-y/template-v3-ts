@@ -13,13 +13,13 @@ import { NButton, NIcon, NSpace, NTag, type DataTableColumns } from "naive-ui";
 import { h, type Component } from "vue";
 
 export const operStatusOptions = [
-  { label: "正常", value: 0 },
-  { label: "异常", value: 1 },
+  { label: "成功", value: "success" },
+  { label: "失败", value: "fail" },
 ];
 
-export const operStatusMap: Record<number, { label: string; type: "success" | "error" }> = {
-  0: { label: "正常", type: "success" },
-  1: { label: "异常", type: "error" },
+export const operStatusMap: Record<string, { label: string; type: "success" | "error" }> = {
+  success: { label: "成功", type: "success" },
+  fail: { label: "失败", type: "error" },
 };
 
 const renderActionButton = (label: string, icon: Component, type: NaiveType, onClick: () => void) => {
@@ -44,45 +44,37 @@ export const createOperLogColumns = (handlers: IOperLogColumnHandlers): DataTabl
   return [
     {
       title: RenderColumnTitle(TextBulletListSquare24Regular, "模块标题"),
-      key: "title",
+      key: "module",
       minWidth: 140,
       align: "center",
       titleAlign: "center",
       ellipsis: { tooltip: true },
-      render: (row) => row.title || "-",
+      render: (row) => row.module || "-",
     },
     {
       title: RenderColumnTitle(Person24Regular, "操作人员"),
-      key: "operName",
+      key: "username",
       width: 120,
       align: "center",
       titleAlign: "center",
-      render: (row) => row.operName || "-",
-    },
-    {
-      title: RenderColumnTitle(Person24Regular, "部门"),
-      key: "deptName",
-      width: 120,
-      align: "center",
-      titleAlign: "center",
-      render: (row) => row.deptName || "-",
+      render: (row) => row.username || "-",
     },
     {
       title: RenderColumnTitle(Globe24Regular, "请求地址"),
-      key: "operUrl",
+      key: "requestUrl",
       minWidth: 160,
       align: "center",
       titleAlign: "center",
       ellipsis: { tooltip: true },
-      render: (row) => row.operUrl || "-",
+      render: (row) => row.requestUrl || "-",
     },
     {
       title: RenderColumnTitle(Globe24Regular, "操作 IP"),
-      key: "operIp",
+      key: "requestIp",
       width: 140,
       align: "center",
       titleAlign: "center",
-      render: (row) => row.operIp || "-",
+      render: (row) => row.requestIp || "-",
     },
     {
       title: RenderColumnTitle(Status24Regular, "操作状态"),
@@ -91,13 +83,13 @@ export const createOperLogColumns = (handlers: IOperLogColumnHandlers): DataTabl
       align: "center",
       titleAlign: "center",
       render: (row) => {
-        const current = operStatusMap[Number(row.status)] ?? { label: "未知", type: "error" as const };
+        const current = operStatusMap[row.status] ?? { label: "未知", type: "error" as const };
         return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
       },
     },
     {
       title: RenderColumnTitle(CalendarLtr24Regular, "操作时间"),
-      key: "operTime",
+      key: "operatedAt",
       width: 180,
       align: "center",
       titleAlign: "center",
@@ -117,7 +109,7 @@ export const createOperLogColumns = (handlers: IOperLogColumnHandlers): DataTabl
             default: () =>
               [
                 renderActionButton("详情", Eye24Regular, "primary", () => handlers.onDetail(row)),
-                userStore.hasPermission("monitor:operation-log:delete")
+                userStore.hasPermission("system:operation-log:delete")
                   ? renderActionButton("删除", Delete24Regular, "error", () => handlers.onDelete(row))
                   : null,
               ].filter(Boolean),

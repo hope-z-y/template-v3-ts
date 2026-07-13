@@ -9,8 +9,8 @@ const originalDisplayMap = new WeakMap<HTMLElement, string>();
  * 权限指令接收一个权限标识或权限标识数组。
  *
  * 使用示例：
- * <NButton v-permission="'system:user:add'">新增</NButton>
- * <NButton v-permission="['system:user:add', 'system:user:edit']">保存</NButton>
+ * <NButton v-permission="'system:user:create'">新增</NButton>
+ * <NButton v-permission="['system:user:create', 'system:user:update']">保存</NButton>
  */
 const canAccess = (value?: string | string[]) => {
   if (!value || (Array.isArray(value) && value.length === 0)) return true;

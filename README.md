@@ -29,7 +29,6 @@ pnpm check
 - `VITE_ROUTE_PREFIX`：部署路由前缀。
 - `VITE_API_TIMEOUT`：请求超时时间。
 - `VITE_AUTH_STORAGE_STRATEGY`：认证存储策略，支持 `memory-refresh` 和 `legacy-localStorage`。
-- `VITE_TRUST_MENU_PERMISSIONS`：是否信任菜单树按钮权限，默认 `false`。
 
 所有 `VITE_` 变量都会被打进前端产物，不能放真正的密钥。密码 RSA 加密只用于避免明文提交，不替代 HTTPS、后端哈希和风控策略。
 
@@ -41,6 +40,8 @@ pnpm check
 - 旧拼写 `system-managment` 不做兼容映射，菜单数据发现错误时应直接修正。
 - API 新增代码使用 camelCase 导出，旧 PascalCase 导出仅作为兼容。
 - 后端响应统一为 `{ code, data, message }`，新增类型使用 `ApiResponse<T>`。
+- 后端雪花 ID 与外键一律按 `string` 使用；分页响应统一为 `{ total, rows }`。
+- 系统管理接口使用 `/system/user`、`/system/department`、`/system/role` 等单数资源路径。
 - 新增用户必须显式设置初始密码，模板不内置默认弱口令。
 
 更多契约见：
@@ -54,14 +55,14 @@ pnpm check
 模板支持页面级和按钮级权限：
 
 ```vue
-<Permission value="system:user:add">
+<Permission value="system:user:create">
   <NButton type="primary">新增</NButton>
 </Permission>
 
 <NButton v-permission="'system:user:delete'">删除</NButton>
 ```
 
-权限默认以 `GET /auth/profile` 返回的 `permissions` 为准。只有在确认后端菜单树已按权限过滤时，才建议把 `VITE_TRUST_MENU_PERMISSIONS` 设为 `true`，将菜单树按钮节点作为补充权限来源。
+页面菜单来自 `GET /auth/profile` 返回的 `menus`，按钮权限统一以同一响应中的 `permissions` 为准。
 
 ## 部署
 

@@ -7,7 +7,7 @@ import type { IGetOperLogListResponse, IOperLog, IQueryOperLogParams } from "../
  * @returns 分页操作日志列表
  */
 export const GetOperLogList = (params: IQueryOperLogParams) => {
-  return request.get<string, IGetOperLogListResponse>("/monitor/oper-logs", { params });
+  return request.get<string, IGetOperLogListResponse>("/system/operation-log", { params });
 };
 
 /**
@@ -15,8 +15,8 @@ export const GetOperLogList = (params: IQueryOperLogParams) => {
  * @param id 操作日志 ID
  * @returns 操作日志详情
  */
-export const GetOperLogById = (id: number) => {
-  return request.get<string, IOperLog>(`/monitor/oper-logs/${id}`);
+export const GetOperLogById = (id: string) => {
+  return request.get<string, IOperLog>(`/system/operation-log/${id}`);
 };
 
 /**
@@ -24,7 +24,7 @@ export const GetOperLogById = (id: number) => {
  * @returns 无业务数据
  */
 export const CleanOperLogs = () => {
-  return request.delete<string, null>("/monitor/oper-logs/clean");
+  return request.delete<string, null>("/system/operation-log/clean");
 };
 
 /**
@@ -32,6 +32,6 @@ export const CleanOperLogs = () => {
  * @param id 操作日志 ID
  * @returns 无业务数据
  */
-export const DeleteOperLog = (id: number) => {
-  return request.delete<string, null>(`/monitor/oper-logs/${id}`);
+export const DeleteOperLog = (id: string) => {
+  return request.delete<string, string>(`/system/operation-log/${id}`);
 };

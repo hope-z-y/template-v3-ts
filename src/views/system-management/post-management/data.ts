@@ -1,6 +1,6 @@
-import type { IAuditable, IPost } from "@/api/types";
+import type { IPost } from "@/api/types";
 import { useUserStore } from "@/stores";
-import { RenderColumnTitle, StatusMap, type NaiveType, type Status } from "@/utils";
+import { RenderColumnTitle, type NaiveType } from "@/utils";
 import Briefcase24Regular from "@vicons/fluent/es/Briefcase24Regular";
 import CalendarLtr24Regular from "@vicons/fluent/es/CalendarLtr24Regular";
 import Delete24Regular from "@vicons/fluent/es/Delete24Regular";
@@ -11,11 +11,11 @@ import TextNumberFormat24Regular from "@vicons/fluent/es/TextNumberFormat24Regul
 import { NButton, NIcon, NSpace, NTag, type DataTableColumns } from "naive-ui";
 import { h, type Component } from "vue";
 
-export type IPostRow = IPost & IAuditable;
+export type IPostRow = IPost;
 
 export const statusOptions = [
-  { label: "启用", value: 1 },
-  { label: "禁用", value: 0 },
+  { label: "启用", value: "enabled" },
+  { label: "禁用", value: "disabled" },
 ];
 
 const renderActionButton = (label: string, icon: Component, type: NaiveType, onClick: () => void) => {
@@ -57,32 +57,35 @@ export const createPostColumns = (handlers: IPostColumnHandlers): DataTableColum
     {
       title: RenderColumnTitle(TextNumberFormat24Regular, "显示顺序"),
       key: "postSort",
-      width: 110,
+      minWidth: 110,
       align: "center",
       titleAlign: "center",
     },
     {
       title: RenderColumnTitle(Status24Regular, "状态"),
       key: "status",
-      width: 100,
+      minWidth: 100,
       align: "center",
       titleAlign: "center",
       render: (row) => {
-        const current = StatusMap.get(row.status as Status) ?? { label: "未知", type: "error" };
+        const current =
+          row.status === "enabled"
+            ? { label: "启用", type: "success" as const }
+            : { label: "禁用", type: "error" as const };
         return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
       },
     },
     {
       title: RenderColumnTitle(CalendarLtr24Regular, "创建时间"),
       key: "createdAt",
-      width: 180,
+      minWidth: 180,
       align: "center",
       titleAlign: "center",
     },
     {
       title: RenderColumnTitle(Options24Regular, "操作"),
       key: "actions",
-      width: 170,
+      minWidth: 170,
       align: "center",
       titleAlign: "center",
       fixed: "right",
@@ -93,7 +96,7 @@ export const createPostColumns = (handlers: IPostColumnHandlers): DataTableColum
           {
             default: () =>
               [
-                userStore.hasPermission("system:post:edit")
+                userStore.hasPermission("system:post:update")
                   ? renderActionButton("编辑", Edit24Regular, "primary", () => handlers.onEdit(row))
                   : null,
                 userStore.hasPermission("system:post:delete")

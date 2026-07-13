@@ -24,7 +24,7 @@
       </template>
 
       <template #toolbar>
-        <Permission value="system:dict:add">
+        <Permission value="system:dict-type:create">
           <NButton type="primary" size="small" @click="handleCreateType">
             <template #icon>
               <NIcon :component="Add24Regular" />
@@ -83,7 +83,7 @@
       </template>
 
       <template #toolbar>
-        <Permission value="system:dict:add">
+        <Permission value="system:dict-data:create">
           <NButton type="primary" size="small" :disabled="!selectedDictType" @click="handleCreateData">
             <template #icon>
               <NIcon :component="Add24Regular" />
@@ -118,6 +118,7 @@
     :mode="dataFormMode"
     :record="editingData"
     :dict-type="selectedDictType?.dictType"
+    :dict-type-id="selectedDictType?.id"
     @success="fetchDictData"
   />
 </template>
@@ -130,7 +131,7 @@ import {
   GetDictDataList,
   GetDictTypeList,
 } from "@/api/system-management";
-import type { IQueryDictDataParams } from "@/api/types";
+import type { CommonStatus, IQueryDictDataParams } from "@/api/types";
 import { Page, Permission, SearchForm } from "@/components";
 import Add24Regular from "@vicons/fluent/es/Add24Regular";
 import { NButton, NDataTable, NEmpty, NFormItem, NIcon, NInput, NSelect, useDialog, useMessage } from "naive-ui";
@@ -148,13 +149,13 @@ import DictTypeForm from "./modules/type-form.vue";
 interface TypeQuery {
   dictName?: string;
   dictType?: string;
-  status?: number | null;
+  status?: CommonStatus | null;
 }
 
 interface DataQuery {
   dictLabel?: string;
   dictValue?: string;
-  status?: number | null;
+  status?: CommonStatus | null;
 }
 
 const message = useMessage();
@@ -211,7 +212,7 @@ const matchesTypeQuery = (row: IDictTypeRow): boolean => {
 
   if (dictName && !row.dictName.includes(dictName)) return false;
   if (dictType && !row.dictType.includes(dictType)) return false;
-  if (typeQuery.status !== undefined && typeQuery.status !== null && Number(row.status) !== typeQuery.status) {
+  if (typeQuery.status !== undefined && typeQuery.status !== null && row.status !== typeQuery.status) {
     return false;
   }
 
@@ -232,7 +233,7 @@ const filterDictDataRows = (rows: IDictDataRow[]): IDictDataRow[] => {
   return rows.filter((row) => {
     if (dictLabel && !row.dictLabel.includes(dictLabel)) return false;
     if (dictValue && !row.dictValue.includes(dictValue)) return false;
-    if (dataQuery.status !== undefined && dataQuery.status !== null && Number(row.status) !== dataQuery.status) {
+    if (dataQuery.status !== undefined && dataQuery.status !== null && row.status !== dataQuery.status) {
       return false;
     }
     return true;
@@ -246,7 +247,7 @@ const buildDataQueryParams = (): IQueryDictDataParams => {
   };
 
   if (selectedDictType.value) {
-    params.dictType = selectedDictType.value.dictType;
+    params.dictTypeId = selectedDictType.value.id;
   }
 
   const dictLabel = dataQuery.dictLabel?.trim();
@@ -258,7 +259,8 @@ const buildDataQueryParams = (): IQueryDictDataParams => {
 const fetchDictTypes = async () => {
   try {
     typeLoading.value = true;
-    dictTypeListRaw.value = await GetDictTypeList();
+    const { rows } = await GetDictTypeList({ pageNum: 1, pageSize: 200 });
+    dictTypeListRaw.value = rows;
 
     if (selectedDictType.value) {
       const current = dictTypeListRaw.value.find((item) => item.id === selectedDictType.value?.id);

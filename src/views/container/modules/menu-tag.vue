@@ -58,7 +58,7 @@
 
 <script setup lang="ts">
 import { useMenuTagStore, type MenuTagItem } from "@/stores/menu-tag";
-import { getFluentIconComponent } from "@/utils";
+import { GetAntdIconComponent } from "@/utils";
 import ArrowCounterclockwise24Regular from "@vicons/fluent/es/ArrowCounterclockwise24Regular";
 import BoardSplit24Regular from "@vicons/fluent/es/BoardSplit24Regular";
 import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
@@ -152,7 +152,7 @@ const actions = computed(() => {
 
 const getTagIcon = (tag: MenuTagItem) => {
   if (tag.affixed) return Tag24Regular;
-  return getFluentIconComponent(tag.icon) ?? BoardSplit24Regular;
+  return GetAntdIconComponent(tag.icon) ?? BoardSplit24Regular;
 };
 
 /** 选中标签图标使用 success 色，固定但未选中使用 warning 色 */

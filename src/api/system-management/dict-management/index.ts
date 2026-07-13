@@ -7,6 +7,7 @@ import type {
   IGetDictDataByTypeResponse,
   IGetDictDataListResponse,
   IGetDictTypeListResponse,
+  IQueryDictTypeParams,
   IQueryDictDataParams,
   IUpdateDictDataParams,
   IUpdateDictTypeParams,
@@ -18,8 +19,8 @@ import type {
  * 查询全部字典类型
  * @returns 字典类型列表
  */
-export const GetDictTypeList = () => {
-  return request.get<string, IGetDictTypeListResponse>("/system/dict/types");
+export const GetDictTypeList = (params: IQueryDictTypeParams) => {
+  return request.get<string, IGetDictTypeListResponse>("/system/dict/type", { params });
 };
 
 /**
@@ -27,8 +28,8 @@ export const GetDictTypeList = () => {
  * @param id 字典类型 ID
  * @returns 字典类型详情
  */
-export const GetDictTypeById = (id: number) => {
-  return request.get<string, IDictType>(`/system/dict/types/${id}`);
+export const GetDictTypeById = (id: string) => {
+  return request.get<string, IDictType>(`/system/dict/type/${id}`);
 };
 
 /**
@@ -37,7 +38,7 @@ export const GetDictTypeById = (id: number) => {
  * @returns 创建后的字典类型
  */
 export const CreateDictType = (data: ICreateDictTypeParams) => {
-  return request.post<string, IDictType>("/system/dict/types", data);
+  return request.post<string, string>("/system/dict/type", data);
 };
 
 /**
@@ -46,8 +47,8 @@ export const CreateDictType = (data: ICreateDictTypeParams) => {
  * @param data 请求体
  * @returns 更新后的字典类型
  */
-export const UpdateDictType = (id: number, data: IUpdateDictTypeParams) => {
-  return request.patch<string, IDictType>(`/system/dict/types/${id}`, data);
+export const UpdateDictType = (id: string, data: IUpdateDictTypeParams) => {
+  return request.patch<string, string>(`/system/dict/type/${id}`, data);
 };
 
 /**
@@ -55,8 +56,8 @@ export const UpdateDictType = (id: number, data: IUpdateDictTypeParams) => {
  * @param id 字典类型 ID
  * @returns 无业务数据
  */
-export const DeleteDictType = (id: number) => {
-  return request.delete<string, null>(`/system/dict/types/${id}`);
+export const DeleteDictType = (id: string) => {
+  return request.delete<string, string>(`/system/dict/type/${id}`);
 };
 
 // --- 字典数据 ---
@@ -84,7 +85,7 @@ export const GetDictDataByType = (dictType: string) => {
  * @param id 字典数据 ID
  * @returns 字典数据详情
  */
-export const GetDictDataById = (id: number) => {
+export const GetDictDataById = (id: string) => {
   return request.get<string, IDictData>(`/system/dict/data/${id}`);
 };
 
@@ -94,7 +95,7 @@ export const GetDictDataById = (id: number) => {
  * @returns 创建后的字典数据
  */
 export const CreateDictData = (data: ICreateDictDataParams) => {
-  return request.post<string, IDictData>("/system/dict/data", data);
+  return request.post<string, string>("/system/dict/data", data);
 };
 
 /**
@@ -103,8 +104,8 @@ export const CreateDictData = (data: ICreateDictDataParams) => {
  * @param data 请求体
  * @returns 更新后的字典数据
  */
-export const UpdateDictData = (id: number, data: IUpdateDictDataParams) => {
-  return request.patch<string, IDictData>(`/system/dict/data/${id}`, data);
+export const UpdateDictData = (id: string, data: IUpdateDictDataParams) => {
+  return request.patch<string, string>(`/system/dict/data/${id}`, data);
 };
 
 /**
@@ -112,6 +113,6 @@ export const UpdateDictData = (id: number, data: IUpdateDictDataParams) => {
  * @param id 字典数据 ID
  * @returns 无业务数据
  */
-export const DeleteDictData = (id: number) => {
-  return request.delete<string, null>(`/system/dict/data/${id}`);
+export const DeleteDictData = (id: string) => {
+  return request.delete<string, string>(`/system/dict/data/${id}`);
 };

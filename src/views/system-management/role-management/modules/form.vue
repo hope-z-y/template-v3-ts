@@ -4,7 +4,7 @@
   <NModal
     v-model:show="visible"
     preset="dialog"
-    style="width: min(1200px, calc(100vw - 32px))"
+    style="width: 40vw"
     :title="mode === 'create' ? '新增角色' : '编辑角色'"
     :mask-closable="false"
     :show-icon="false"
@@ -12,15 +12,22 @@
     title-class="naive-modal-title"
     @after-leave="handleAfterLeave"
   >
-    <div class="grid grid-cols-3 gap-6 min-h-[420px]">
-      <!-- 左侧：基础表单 -->
-      <NForm ref="formRef" :model="formModel" :rules="rules" label-placement="left" label-width="80" class="min-w-0">
+    <div class="flex gap-4 h-[min(560px,calc(100vh-220px))]">
+      <!-- 左侧：基础信息 -->
+      <NForm
+        ref="formRef"
+        :model="formModel"
+        :rules="rules"
+        label-placement="left"
+        label-width="80"
+        class="w-85 shrink-0 overflow-y-auto pr-1"
+      >
         <NFormItem label="角色名称" path="roleName">
           <NInput v-model:value="formModel.roleName" placeholder="请输入角色名称" maxlength="50" show-count />
         </NFormItem>
-        <NFormItem label="角色编码" path="roleCode">
+        <NFormItem label="角色标识" path="roleKey">
           <NInput
-            v-model:value="formModel.roleCode"
+            v-model:value="formModel.roleKey"
             placeholder="请输入角色编码，如 admin"
             maxlength="50"
             show-count
@@ -54,47 +61,66 @@
             placeholder="请输入备注"
             maxlength="500"
             show-count
-            :autosize="{ minRows: 3, maxRows: 6 }"
+            :autosize="{ minRows: 3, maxRows: 5 }"
           />
         </NFormItem>
       </NForm>
 
-      <!-- 中间：菜单权限 -->
-      <div class="flex flex-col min-w-0 min-h-0">
-        <div class="text-sm font-medium mb-2 shrink-0">菜单权限</div>
-        <NTree
-          v-model:checked-keys="formModel.menuIds"
-          :data="menuTreeOptions"
-          :loading="menuLoading"
-          checkable
-          cascade
-          key-field="key"
-          label-field="label"
-          children-field="children"
-          default-expand-all
-          block-line
-          class="flex-1 overflow-auto"
-        />
-      </div>
+      <div class="w-px self-stretch shrink-0 bg-black/8 dark:bg-white/10" />
 
-      <!-- 右侧：数据范围 -->
-      <div class="flex flex-col min-w-0 min-h-0">
-        <div class="text-sm font-medium mb-2 shrink-0">数据范围</div>
-        <NTree
-          v-if="formModel.dataScope === 2"
-          v-model:checked-keys="formModel.deptIds"
-          :data="deptTreeOptions"
-          :loading="deptLoading"
-          checkable
-          cascade
-          key-field="key"
-          label-field="label"
-          children-field="children"
-          default-expand-all
-          block-line
-          class="flex-1 overflow-auto"
-        />
-        <NEmpty v-else description="请选择「自定义数据权限」后配置数据范围" class="flex-1 justify-center" />
+      <!-- 右侧：权限配置 -->
+      <div class="flex-1 min-w-0 min-h-0 grid gap-4" :class="showDeptScope ? 'grid-cols-2' : 'grid-cols-1'">
+        <!-- 菜单权限 -->
+        <div class="flex flex-col min-h-0 min-w-0 rounded-md overflow-hidden shadow-md">
+          <div class="flex items-center justify-between gap-2 shrink-0 px-3 py-2 bg-black/3 dark:bg-white/5">
+            <span class="text-sm font-medium">菜单权限</span>
+            <NSpace :size="8">
+              <NButton text type="primary" size="tiny" @click="expandMenuAll(true)">展开</NButton>
+              <NButton text type="primary" size="tiny" @click="expandMenuAll(false)">折叠</NButton>
+            </NSpace>
+          </div>
+          <div class="flex-1 min-h-0 overflow-y-auto p-2">
+            <NSpin :show="menuLoading">
+              <NTree
+                v-model:checked-keys="formModel.menuIds"
+                v-model:expanded-keys="menuExpandedKeys"
+                :data="menuTreeOptions"
+                checkable
+                cascade
+                key-field="key"
+                label-field="label"
+                children-field="children"
+                block-line
+              />
+            </NSpin>
+          </div>
+        </div>
+
+        <!-- 数据范围：仅自定义数据权限时展示 -->
+        <div v-if="showDeptScope" class="flex flex-col min-h-0 min-w-0 rounded-md overflow-hidden shadow-md">
+          <div class="flex items-center justify-between gap-2 shrink-0 px-3 py-2 bg-black/3 dark:bg-white/5">
+            <span class="text-sm font-medium">数据范围</span>
+            <NSpace :size="8">
+              <NButton text type="primary" size="tiny" @click="expandDeptAll(true)">展开</NButton>
+              <NButton text type="primary" size="tiny" @click="expandDeptAll(false)">折叠</NButton>
+            </NSpace>
+          </div>
+          <div class="flex-1 min-h-0 overflow-y-auto p-2">
+            <NSpin :show="deptLoading">
+              <NTree
+                v-model:checked-keys="formModel.deptIds"
+                v-model:expanded-keys="deptExpandedKeys"
+                :data="deptTreeOptions"
+                checkable
+                cascade
+                key-field="key"
+                label-field="label"
+                children-field="children"
+                block-line
+              />
+            </NSpin>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -119,12 +145,11 @@
 
 <script setup lang="ts">
 import { CreateRole, GetDeptTree, GetMenuTree, GetRoleById, UpdateRole } from "@/api/system-management";
-import type { ICreateRoleParams, IDept, IMenu, IUpdateRoleParams } from "@/api/types";
+import type { CommonStatus, DataScope, ICreateRoleParams, IDept, IMenu, IUpdateRoleParams } from "@/api/types";
 import Checkmark24Regular from "@vicons/fluent/es/Checkmark24Regular";
 import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
 import {
   NButton,
-  NEmpty,
   NForm,
   NFormItem,
   NIcon,
@@ -135,6 +160,7 @@ import {
   NRadioGroup,
   NSelect,
   NSpace,
+  NSpin,
   NTree,
   useMessage,
   type FormInst,
@@ -145,22 +171,22 @@ import { computed, ref, watch } from "vue";
 import { dataScopeOptions, statusOptions, type IRoleRow } from "../data";
 
 interface RoleFormModel {
-  roleCode: string;
+  roleKey: string;
   roleName: string;
   roleSort: number;
-  dataScope: number;
-  status: number;
+  dataScope: DataScope;
+  status: CommonStatus;
   remark: string;
-  menuIds: number[];
-  deptIds: number[];
+  menuIds: string[];
+  deptIds: string[];
 }
 
 const createDefaultForm = (): RoleFormModel => ({
-  roleCode: "",
+  roleKey: "",
   roleName: "",
   roleSort: 0,
-  dataScope: 1,
-  status: 1,
+  dataScope: "all",
+  status: "enabled",
   remark: "",
   menuIds: [],
   deptIds: [],
@@ -185,11 +211,33 @@ const menuLoading = ref(false);
 const deptTree = ref<IDept[]>([]);
 const menuTree = ref<IMenu[]>([]);
 const formModel = ref<RoleFormModel>(createDefaultForm());
+const menuExpandedKeys = ref<Array<string | number>>([]);
+const deptExpandedKeys = ref<Array<string | number>>([]);
+
+const showDeptScope = computed(() => formModel.value.dataScope === "custom");
 
 const rules = computed<FormRules>(() => ({
   roleName: [{ required: true, message: "请输入角色名称", trigger: ["input", "blur"] }],
-  roleCode: [{ required: true, message: "请输入角色编码", trigger: ["input", "blur"] }],
+  roleKey: [{ required: true, message: "请输入角色标识", trigger: ["input", "blur"] }],
 }));
+
+const collectTreeKeys = (nodes: TreeOption[]): Array<string | number> => {
+  const keys: Array<string | number> = [];
+
+  const walk = (list: TreeOption[]) => {
+    list.forEach((node) => {
+      if (node.key !== undefined && node.key !== null) {
+        keys.push(node.key);
+      }
+      if (node.children?.length) {
+        walk(node.children);
+      }
+    });
+  };
+
+  walk(nodes);
+  return keys;
+};
 
 const toDeptTreeOptions = (nodes: IDept[]): TreeOption[] =>
   nodes.map((node) => ({
@@ -208,12 +256,22 @@ const toMenuTreeOptions = (menus: IMenu[]): TreeOption[] =>
 const deptTreeOptions = computed<TreeOption[]>(() => toDeptTreeOptions(deptTree.value));
 const menuTreeOptions = computed<TreeOption[]>(() => toMenuTreeOptions(menuTree.value));
 
+const expandMenuAll = (expand: boolean) => {
+  menuExpandedKeys.value = expand ? collectTreeKeys(menuTreeOptions.value) : [];
+};
+
+const expandDeptAll = (expand: boolean) => {
+  deptExpandedKeys.value = expand ? collectTreeKeys(deptTreeOptions.value) : [];
+};
+
 const loadDeptTree = async () => {
   try {
     deptLoading.value = true;
     deptTree.value = await GetDeptTree();
+    deptExpandedKeys.value = collectTreeKeys(toDeptTreeOptions(deptTree.value));
   } catch {
     deptTree.value = [];
+    deptExpandedKeys.value = [];
   } finally {
     deptLoading.value = false;
   }
@@ -223,8 +281,10 @@ const loadMenuTree = async () => {
   try {
     menuLoading.value = true;
     menuTree.value = await GetMenuTree();
+    menuExpandedKeys.value = collectTreeKeys(toMenuTreeOptions(menuTree.value));
   } catch {
     menuTree.value = [];
+    menuExpandedKeys.value = [];
   } finally {
     menuLoading.value = false;
   }
@@ -236,14 +296,14 @@ const loadRoleDetail = async () => {
   try {
     const role = await GetRoleById(props.record.id);
     formModel.value = {
-      roleCode: role.roleCode,
+      roleKey: role.roleKey,
       roleName: role.roleName,
       roleSort: role.roleSort ?? 0,
-      dataScope: role.dataScope ?? 1,
+      dataScope: role.dataScope,
       status: role.status,
       remark: role.remark ?? "",
-      menuIds: role.roleMenus?.map((item) => item.menuId) ?? [],
-      deptIds: role.roleDepts?.map((item) => item.deptId) ?? [],
+      menuIds: role.menuIds,
+      deptIds: role.deptIds,
     };
   } catch {
     resetFormFromRecord();
@@ -253,14 +313,14 @@ const loadRoleDetail = async () => {
 const resetFormFromRecord = () => {
   if (props.mode === "edit" && props.record) {
     formModel.value = {
-      roleCode: props.record.roleCode,
+      roleKey: props.record.roleKey,
       roleName: props.record.roleName,
       roleSort: props.record.roleSort ?? 0,
-      dataScope: props.record.dataScope ?? 1,
+      dataScope: props.record.dataScope,
       status: props.record.status,
       remark: props.record.remark ?? "",
-      menuIds: [],
-      deptIds: [],
+      menuIds: props.record.menuIds,
+      deptIds: props.record.deptIds,
     };
     return;
   }
@@ -269,14 +329,14 @@ const resetFormFromRecord = () => {
 };
 
 const buildPayload = (): ICreateRoleParams | IUpdateRoleParams => ({
-  roleCode: formModel.value.roleCode.trim(),
+  roleKey: formModel.value.roleKey.trim(),
   roleName: formModel.value.roleName.trim(),
   roleSort: formModel.value.roleSort,
   dataScope: formModel.value.dataScope,
   status: formModel.value.status,
   remark: formModel.value.remark.trim() || undefined,
   menuIds: formModel.value.menuIds,
-  deptIds: formModel.value.dataScope === 2 ? formModel.value.deptIds : [],
+  deptIds: formModel.value.dataScope === "custom" ? formModel.value.deptIds : [],
 });
 
 const handleCancel = () => {
@@ -286,12 +346,19 @@ const handleCancel = () => {
 const handleAfterLeave = () => {
   formRef.value?.restoreValidation();
   formModel.value = createDefaultForm();
+  menuExpandedKeys.value = [];
+  deptExpandedKeys.value = [];
 };
 
 const handleSubmit = async () => {
   try {
     await formRef.value?.validate();
   } catch {
+    return;
+  }
+
+  if (formModel.value.dataScope === "custom" && formModel.value.deptIds.length === 0) {
+    message.warning("请选择自定义数据范围");
     return;
   }
 

@@ -158,7 +158,7 @@ const handleSubmit = async () => {
     submitting.value = true;
 
     // 与登录/新增用户相同：先取公钥再加密密码
-    const { publicKey } = await GetPublicEncryptKey();
+    const publicKey = await GetPublicEncryptKey();
     const encryptedPassword = Encrypt(formModel.value.password, publicKey);
     if (!encryptedPassword) {
       message.error("密码加密失败");

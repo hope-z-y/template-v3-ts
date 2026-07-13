@@ -26,10 +26,13 @@
       <NFormItem label="部门名称" path="deptName">
         <NInput v-model:value="formModel.deptName" placeholder="请输入部门名称" maxlength="50" show-count />
       </NFormItem>
+      <NFormItem label="部门编码" path="deptCode">
+        <NInput v-model:value="formModel.deptCode" placeholder="请输入部门编码" maxlength="64" show-count />
+      </NFormItem>
       <NFormItem label="显示顺序" path="sort">
         <NInputNumber v-model:value="formModel.sort" class="w-full" placeholder="请输入显示顺序" :min="0" />
       </NFormItem>
-      <NFormItem label="负责人" path="leader">
+      <NFormItem label="负责人" path="leaderUserId">
         <NSelect
           v-model:value="selectedLeaderId"
           :options="userOptions"
@@ -107,26 +110,25 @@ import {
 import { computed, ref, watch } from "vue";
 
 interface LeaderOption extends SelectOption {
-  value: number;
+  value: string;
   label: string;
   leaderName: string;
-  phone?: string;
-  email?: string;
 }
 
 const statusOptions = [
-  { label: "启用", value: 1 },
-  { label: "禁用", value: 0 },
+  { label: "启用", value: "enabled" },
+  { label: "禁用", value: "disabled" },
 ] as const;
 
 const createDefaultForm = (): ICreateDeptParams => ({
-  parentId: 0,
+  parentId: null,
   deptName: "",
+  deptCode: "",
   sort: 0,
-  leader: "",
+  leaderUserId: undefined,
   phone: "",
   email: "",
-  status: 1,
+  status: "enabled",
 });
 
 const props = defineProps<{
@@ -147,7 +149,7 @@ const treeLoading = ref(false);
 const userLoading = ref(false);
 const deptTree = ref<IDept[]>([]);
 const userList = ref<IUserOption[]>([]);
-const selectedLeaderId = ref<number | null>(null);
+const selectedLeaderId = ref<string | null>(null);
 const formModel = ref<ICreateDeptParams>(createDefaultForm());
 
 const getUserDisplayName = (user: IUserOption) => user.username?.trim() || user.account;
@@ -162,26 +164,16 @@ const userOptions = computed<LeaderOption[]>(() =>
     value: user.id,
     label: getUserOptionLabel(user),
     leaderName: getUserDisplayName(user),
-    phone: user.phone,
-    email: user.email,
   })),
 );
 
-const findLeaderUserId = (leader?: string | null) => {
-  const name = leader?.trim();
-  if (!name) return null;
-
-  const matched = userList.value.find((user) => getUserDisplayName(user) === name || user.account === name);
-  return matched?.id ?? null;
-};
-
 const rules: FormRules = {
-  parentId: [{ required: true, type: "number", message: "请选择上级部门", trigger: ["change", "blur"] }],
   deptName: [{ required: true, message: "请输入部门名称", trigger: ["input", "blur"] }],
+  deptCode: [{ required: true, message: "请输入部门编码", trigger: ["input", "blur"] }],
   email: [{ type: "email", message: "邮箱格式不正确", trigger: ["input", "blur"] }],
 };
 
-const toTreeOptions = (nodes: IDept[], excludeId?: number): TreeSelectOption[] => {
+const toTreeOptions = (nodes: IDept[], excludeId?: string): TreeSelectOption[] => {
   return nodes
     .filter((node) => node.id !== excludeId)
     .map((node) => ({
@@ -196,7 +188,7 @@ const deptTreeOptions = computed<TreeSelectOption[]>(() => {
 
   return [
     {
-      key: 0,
+      key: "root",
       label: "顶级部门",
       children: children.length ? children : undefined,
     },
@@ -225,20 +217,16 @@ const loadUsers = async () => {
   }
 };
 
-const handleLeaderChange = (userId: number | null) => {
+const handleLeaderChange = (userId: string | null) => {
   if (!userId) {
-    formModel.value.leader = "";
-    formModel.value.phone = "";
-    formModel.value.email = "";
+    formModel.value.leaderUserId = undefined;
     return;
   }
 
   const user = userOptions.value.find((item) => item.value === userId);
   if (!user) return;
 
-  formModel.value.leader = user.leaderName;
-  formModel.value.phone = user.phone ?? "";
-  formModel.value.email = user.email ?? "";
+  formModel.value.leaderUserId = user.value;
 };
 
 const resetForm = () => {
@@ -246,13 +234,14 @@ const resetForm = () => {
     formModel.value = {
       parentId: props.record.parentId,
       deptName: props.record.deptName,
+      deptCode: props.record.deptCode,
       sort: props.record.sort,
-      leader: props.record.leader ?? "",
+      leaderUserId: props.record.leaderUserId ?? undefined,
       phone: props.record.phone ?? "",
       email: props.record.email ?? "",
       status: props.record.status,
     };
-    selectedLeaderId.value = findLeaderUserId(props.record.leader);
+    selectedLeaderId.value = props.record.leaderUserId;
     return;
   }
 
@@ -281,15 +270,15 @@ const handleSubmit = async () => {
   const payload: ICreateDeptParams = {
     parentId: formModel.value.parentId,
     deptName: formModel.value.deptName.trim(),
+    deptCode: formModel.value.deptCode.trim(),
     sort: formModel.value.sort ?? 0,
-    status: formModel.value.status ?? 1,
+    status: formModel.value.status ?? "enabled",
   };
 
-  const leader = formModel.value.leader?.trim();
   const phone = formModel.value.phone?.trim();
   const email = formModel.value.email?.trim();
 
-  if (leader) payload.leader = leader;
+  if (formModel.value.leaderUserId) payload.leaderUserId = formModel.value.leaderUserId;
   if (phone) payload.phone = phone;
   if (email) payload.email = email;
 

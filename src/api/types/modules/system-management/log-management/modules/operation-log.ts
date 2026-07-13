@@ -1,34 +1,33 @@
 import type { IPagination, IPaginationData } from "../../../common";
+import type { EntityId, LogStatus, OperationType } from "../../common";
 
-/** GET /monitor/oper-logs 查询参数 */
 export interface IQueryOperLogParams extends IPagination {
-  /** 模块标题（模糊匹配） */
-  title?: string;
-  /** 操作人员（模糊匹配） */
-  operName?: string;
-  /** 操作状态：0正常 1异常 */
-  status?: number;
+  traceId?: string;
+  userId?: EntityId;
+  username?: string;
+  module?: string;
+  operationType?: OperationType;
+  status?: LogStatus;
+  operatedStartAt?: string;
+  operatedEndAt?: string;
 }
-
-/** 操作日志实体 */
 export interface IOperLog {
-  id: number;
-  title: string | null;
-  businessType: number | null;
+  id: EntityId;
+  traceId: string | null;
+  userId: EntityId | null;
+  username: string | null;
+  module: string;
+  operationType: OperationType;
   method: string | null;
   requestMethod: string | null;
-  operatorType: number;
-  operName: string | null;
-  deptName: string | null;
-  operUrl: string | null;
-  operIp: string | null;
-  operLocation: string | null;
-  operParam: string | null;
-  jsonResult: string | null;
-  status: number;
-  errorMsg: string | null;
-  operTime: string;
+  requestUrl: string | null;
+  requestIp: string | null;
+  requestLocation: string | null;
+  requestParams: string | null;
+  responseResult: string | null;
+  status: LogStatus;
+  errorMessage: string | null;
+  costTimeMs: number | null;
+  operatedAt: string;
 }
-
-/** GET /monitor/oper-logs 响应体 */
 export type IGetOperLogListResponse = IPaginationData<IOperLog>;

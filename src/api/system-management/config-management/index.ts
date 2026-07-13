@@ -13,16 +13,16 @@ import type {
  * @returns 分页参数配置列表
  */
 export const GetConfigList = (params: IQueryConfigParams) => {
-  return request.get<string, IGetConfigListResponse>("/system/configs", { params });
+  return request.get<string, IGetConfigListResponse>("/system/parameter", { params });
 };
 
 /**
- * 按 configKey 查询参数值
- * @param configKey 参数键名
+ * 按 paramKey 查询参数值
+ * @param paramKey 参数键名
  * @returns 参数配置详情
  */
-export const GetConfigByKey = (configKey: string) => {
-  return request.get<string, IConfig>(`/system/configs/key/${configKey}`);
+export const GetConfigByKey = (paramKey: string) => {
+  return request.get<string, IConfig>(`/system/parameter/key/${encodeURIComponent(paramKey)}`);
 };
 
 /**
@@ -30,8 +30,8 @@ export const GetConfigByKey = (configKey: string) => {
  * @param id 参数配置 ID
  * @returns 参数配置详情
  */
-export const GetConfigById = (id: number) => {
-  return request.get<string, IConfig>(`/system/configs/${id}`);
+export const GetConfigById = (id: string) => {
+  return request.get<string, IConfig>(`/system/parameter/${id}`);
 };
 
 /**
@@ -40,7 +40,7 @@ export const GetConfigById = (id: number) => {
  * @returns 创建后的参数配置
  */
 export const CreateConfig = (data: ICreateConfigParams) => {
-  return request.post<string, IConfig>("/system/configs", data);
+  return request.post<string, string>("/system/parameter", data);
 };
 
 /**
@@ -49,8 +49,8 @@ export const CreateConfig = (data: ICreateConfigParams) => {
  * @param data 请求体
  * @returns 更新后的参数配置
  */
-export const UpdateConfig = (id: number, data: IUpdateConfigParams) => {
-  return request.patch<string, IConfig>(`/system/configs/${id}`, data);
+export const UpdateConfig = (id: string, data: IUpdateConfigParams) => {
+  return request.patch<string, string>(`/system/parameter/${id}`, data);
 };
 
 /**
@@ -58,6 +58,6 @@ export const UpdateConfig = (id: number, data: IUpdateConfigParams) => {
  * @param id 参数配置 ID
  * @returns 无业务数据
  */
-export const DeleteConfig = (id: number) => {
-  return request.delete<string, null>(`/system/configs/${id}`);
+export const DeleteConfig = (id: string) => {
+  return request.delete<string, string>(`/system/parameter/${id}`);
 };

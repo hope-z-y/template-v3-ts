@@ -30,14 +30,12 @@ export interface IPagination {
   pageSize: number;
 }
 
-/** 可审计字段（created_by / updated_at 等） */
+/** 后端通用审计字段。雪花 ID 始终按字符串传输。 */
 export interface IAuditable {
-  /** 创建人用户 ID */
-  createdBy: number | null;
-  /** 创建时间 */
+  id: string;
   createdAt: string;
-  /** 更新人用户 ID */
-  updatedBy: number | null;
-  /** 更新时间 */
   updatedAt: string;
+  createdById: string | null;
+  updatedById: string | null;
+  remark: string | null;
 }

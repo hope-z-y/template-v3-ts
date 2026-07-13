@@ -4,6 +4,7 @@ import type {
   IGetMenuListResponse,
   IGetMenuTreeResponse,
   IMenu,
+  IQueryMenuParams,
   IUpdateMenuParams,
 } from "../../types";
 
@@ -11,8 +12,8 @@ import type {
  * 查询菜单列表（平铺）
  * @returns 菜单列表
  */
-export const GetMenuList = () => {
-  return request.get<string, IGetMenuListResponse>("/system/menus");
+export const GetMenuList = (params?: IQueryMenuParams) => {
+  return request.get<string, IGetMenuListResponse>("/system/menu", { params });
 };
 
 /**
@@ -20,7 +21,7 @@ export const GetMenuList = () => {
  * @returns 菜单树
  */
 export const GetMenuTree = () => {
-  return request.get<string, IGetMenuTreeResponse>("/system/menus/tree");
+  return request.get<string, IGetMenuTreeResponse>("/system/menu/tree");
 };
 
 /**
@@ -28,8 +29,8 @@ export const GetMenuTree = () => {
  * @param id 菜单 ID
  * @returns 菜单详情
  */
-export const GetMenuById = (id: number) => {
-  return request.get<string, IMenu>(`/system/menus/${id}`);
+export const GetMenuById = (id: string) => {
+  return request.get<string, IMenu>(`/system/menu/${id}`);
 };
 
 /**
@@ -38,7 +39,7 @@ export const GetMenuById = (id: number) => {
  * @returns 创建后的菜单详情
  */
 export const CreateMenu = (data: ICreateMenuParams) => {
-  return request.post<string, IMenu>("/system/menus", data);
+  return request.post<string, string>("/system/menu", data);
 };
 
 /**
@@ -47,8 +48,8 @@ export const CreateMenu = (data: ICreateMenuParams) => {
  * @param data 请求体
  * @returns 更新后的菜单详情
  */
-export const UpdateMenu = (id: number, data: IUpdateMenuParams) => {
-  return request.patch<string, IMenu>(`/system/menus/${id}`, data);
+export const UpdateMenu = (id: string, data: IUpdateMenuParams) => {
+  return request.patch<string, string>(`/system/menu/${id}`, data);
 };
 
 /**
@@ -56,6 +57,6 @@ export const UpdateMenu = (id: number, data: IUpdateMenuParams) => {
  * @param id 菜单 ID
  * @returns 无业务数据
  */
-export const DeleteMenu = (id: number) => {
-  return request.delete<string, null>(`/system/menus/${id}`);
+export const DeleteMenu = (id: string) => {
+  return request.delete<string, string>(`/system/menu/${id}`);
 };

@@ -87,8 +87,8 @@ interface LoginForm {
 const formRef = ref<FormInst | null>(null);
 const submitting = ref(false);
 const form = ref<LoginForm>({
-  account: "",
-  password: "",
+  account: "admin",
+  password: "admin123456",
   code: "",
 });
 
@@ -149,24 +149,22 @@ const signIn = async () => {
 
     const pwd = Encrypt(form.value.password, publicKey.value);
     if (!pwd) {
-      message.error("密码加密失败");
+      message.error("密钥无效，密码加密失败");
       return;
     }
 
     const data: ISignInParams = {
       account: form.value.account.trim(),
       password: pwd,
+      captchaCode: form.value.code.trim(),
+      captchaKey: captcha.value.captchaKey || "",
     };
-
-    if (captcha.value.enabled) {
-      data.captchaCode = form.value.code.trim();
-      data.captchaKey = captcha.value.captchaKey;
-    }
 
     const result = await SignIn(data);
     userStore.setTokens(result);
     menuStore.reset();
-    await Promise.all([userStore.loadProfile(true), menuStore.initRoutes(true)]);
+    // Profile 会一次返回用户、权限和菜单，loadProfile 内部会继续完成动态路由注册。
+    await userStore.loadProfile(true);
     message.success("登录成功");
 
     await router.replace(resolveRedirectPath());
@@ -188,6 +186,7 @@ const captcha = ref<ICaptchaResponse>({
   enabled: true,
   captchaKey: "",
   img: "",
+  expireIn: 0,
 });
 
 const getCaptchaCode = async () => {

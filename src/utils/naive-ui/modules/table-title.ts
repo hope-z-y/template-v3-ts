@@ -2,10 +2,12 @@ import { NIcon } from "naive-ui";
 import { h, type Component } from "vue";
 
 /**
- * 自定义渲染表格图标Label
- * @param icon 渲染图标
- * @param label label名称
- * @returns
+ * RenderColumnTitle
+ * 自定义渲染表格列标题：左侧图标 + 右侧文案，用于 Naive UI DataTable 的 title 插槽。
+ *
+ * @param icon - 渲染用的 Vue 图标组件
+ * @param label - 列标题文案
+ * @returns () => VNode - 返回可供 title 使用的渲染函数
  */
 export const RenderColumnTitle = (icon: Component, label: string) => {
   return () =>

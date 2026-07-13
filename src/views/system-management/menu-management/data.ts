@@ -1,6 +1,6 @@
 import type { IMenu } from "@/api/types";
 import { useUserStore } from "@/stores";
-import { RenderColumnTitle, StatusMap, getFluentIconComponent, type NaiveType, type Status } from "@/utils";
+import { RenderColumnTitle, GetAntdIconComponent, type NaiveType } from "@/utils";
 import Delete24Regular from "@vicons/fluent/es/Delete24Regular";
 import Edit24Regular from "@vicons/fluent/es/Edit24Regular";
 import Options24Regular from "@vicons/fluent/es/Options24Regular";
@@ -11,35 +11,35 @@ import { NButton, NEllipsis, NIcon, NSpace, NTag, type DataTableColumns } from "
 import { h, type Component } from "vue";
 
 export const statusOptions = [
-  { label: "启用", value: 1 },
-  { label: "禁用", value: 0 },
+  { label: "启用", value: "enabled" },
+  { label: "禁用", value: "disabled" },
 ];
 
 export const visibleOptions = [
-  { label: "显示", value: 1 },
-  { label: "隐藏", value: 0 },
+  { label: "显示", value: true },
+  { label: "隐藏", value: false },
 ];
 
 export const menuTypeOptions = [
-  { label: "目录", value: "M" },
-  { label: "菜单", value: "C" },
-  { label: "按钮", value: "F" },
+  { label: "目录", value: "directory" },
+  { label: "菜单", value: "menu" },
+  { label: "按钮", value: "button" },
 ];
 
 export const menuTypeMap: Record<string, { label: string; type: "info" | "success" | "warning" }> = {
-  M: { label: "目录", type: "info" },
-  C: { label: "菜单", type: "success" },
-  F: { label: "按钮", type: "warning" },
+  directory: { label: "目录", type: "info" },
+  menu: { label: "菜单", type: "success" },
+  button: { label: "按钮", type: "warning" },
 };
 
 export const isFrameOptions = [
-  { label: "是", value: 1 },
-  { label: "否", value: 0 },
+  { label: "是", value: true },
+  { label: "否", value: false },
 ];
 
 export const isCacheOptions = [
-  { label: "缓存", value: 1 },
-  { label: "不缓存", value: 0 },
+  { label: "缓存", value: true },
+  { label: "不缓存", value: false },
 ];
 
 const renderActionButton = (label: string, icon: Component, type: NaiveType, onClick: () => void) => {
@@ -68,9 +68,9 @@ export const createMenuColumns = (handlers: IMenuColumnHandlers): DataTableColum
       tree: true,
       minWidth: 200,
       align: "left",
-      titleAlign: "center",
+      titleAlign: "left",
       render: (row) => {
-        const iconComponent = getFluentIconComponent(row.icon);
+        const iconComponent = GetAntdIconComponent(row.icon);
         const content = h(
           "span",
           { class: "inline-flex min-w-0 max-w-full items-center gap-2" },
@@ -103,21 +103,21 @@ export const createMenuColumns = (handlers: IMenuColumnHandlers): DataTableColum
     },
     {
       title: RenderColumnTitle(TextBulletListSquare24Regular, "权限标识"),
-      key: "permission",
+      key: "permissionCode",
       minWidth: 140,
       align: "center",
       titleAlign: "center",
       ellipsis: { tooltip: true },
-      render: (row) => row.permission || "-",
+      render: (row) => row.permissionCode || "-",
     },
     {
       title: RenderColumnTitle(TextBulletListSquare24Regular, "路由地址"),
-      key: "path",
+      key: "routePath",
       minWidth: 140,
       align: "center",
       titleAlign: "center",
       ellipsis: { tooltip: true },
-      render: (row) => row.path || "-",
+      render: (row) => row.routePath || "-",
     },
     {
       title: RenderColumnTitle(Status24Regular, "状态"),
@@ -126,7 +126,10 @@ export const createMenuColumns = (handlers: IMenuColumnHandlers): DataTableColum
       align: "center",
       titleAlign: "center",
       render: (row) => {
-        const current = StatusMap.get(row.status as Status) ?? { label: "未知", type: "error" };
+        const current =
+          row.status === "enabled"
+            ? { label: "启用", type: "success" as const }
+            : { label: "禁用", type: "error" as const };
         return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
       },
     },
@@ -144,7 +147,7 @@ export const createMenuColumns = (handlers: IMenuColumnHandlers): DataTableColum
           {
             default: () =>
               [
-                userStore.hasPermission("system:menu:edit")
+                userStore.hasPermission("system:menu:update")
                   ? renderActionButton("编辑", Edit24Regular, "primary", () => handlers.onEdit(row))
                   : null,
                 userStore.hasPermission("system:menu:delete")

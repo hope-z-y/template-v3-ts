@@ -7,7 +7,7 @@ import type { ICreateRoleParams, IGetRoleListResponse, IQueryRoleParams, IRole, 
  * @returns 分页角色列表
  */
 export const GetRoleList = (params: IQueryRoleParams) => {
-  return request.get<string, IGetRoleListResponse>("/system/roles", { params });
+  return request.get<string, IGetRoleListResponse>("/system/role", { params });
 };
 
 /**
@@ -15,8 +15,8 @@ export const GetRoleList = (params: IQueryRoleParams) => {
  * @param id 角色 ID
  * @returns 角色详情（含菜单/部门权限）
  */
-export const GetRoleById = (id: number) => {
-  return request.get<string, IRole>(`/system/roles/${id}`);
+export const GetRoleById = (id: string) => {
+  return request.get<string, IRole>(`/system/role/${id}`);
 };
 
 /**
@@ -25,7 +25,7 @@ export const GetRoleById = (id: number) => {
  * @returns 创建后的角色详情
  */
 export const CreateRole = (data: ICreateRoleParams) => {
-  return request.post<string, IRole>("/system/roles", data);
+  return request.post<string, string>("/system/role", data);
 };
 
 /**
@@ -34,8 +34,8 @@ export const CreateRole = (data: ICreateRoleParams) => {
  * @param data 请求体
  * @returns 更新后的角色详情
  */
-export const UpdateRole = (id: number, data: IUpdateRoleParams) => {
-  return request.patch<string, IRole>(`/system/roles/${id}`, data);
+export const UpdateRole = (id: string, data: IUpdateRoleParams) => {
+  return request.patch<string, string>(`/system/role/${id}`, data);
 };
 
 /**
@@ -43,6 +43,6 @@ export const UpdateRole = (id: number, data: IUpdateRoleParams) => {
  * @param id 角色 ID
  * @returns 无业务数据
  */
-export const DeleteRole = (id: number) => {
-  return request.delete<string, null>(`/system/roles/${id}`);
+export const DeleteRole = (id: string) => {
+  return request.delete<string, string>(`/system/role/${id}`);
 };

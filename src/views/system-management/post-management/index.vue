@@ -23,7 +23,7 @@
     </template>
 
     <template #toolbar>
-      <Permission value="system:post:add">
+      <Permission value="system:post:create">
         <NButton type="primary" @click="handleCreate">
           <template #icon>
             <NIcon :component="Add24Regular" />
@@ -55,10 +55,9 @@
 
 <script setup lang="ts">
 import { DeletePost, GetPostList } from "@/api/system-management";
-import type { IQueryPostParams } from "@/api/types";
+import type { CommonStatus, IQueryPostParams } from "@/api/types";
 import { Page, Permission, SearchForm } from "@/components";
 import { useColumnVisibility, useCrudDialog, useDeleteConfirm, useTableQuery } from "@/hooks";
-import type { Status } from "@/utils";
 import Add24Regular from "@vicons/fluent/es/Add24Regular";
 import { NButton, NDataTable, NFormItem, NIcon, NInput, NSelect, type DataTableColumns } from "naive-ui";
 import { computed, onMounted, reactive } from "vue";
@@ -70,7 +69,7 @@ const { confirmDelete } = useDeleteConfirm();
 interface PostQuery {
   postName?: string;
   postCode?: string;
-  status?: number;
+  status?: CommonStatus;
 }
 
 const createDefaultQuery = (): PostQuery => ({
@@ -92,7 +91,7 @@ const buildQueryParams = (page: number, pageSize: number): IQueryPostParams => {
 
   if (postName) params.postName = postName;
   if (postCode) params.postCode = postCode;
-  if (query.status !== undefined && query.status !== null) params.status = query.status as Status;
+  if (query.status !== undefined && query.status !== null) params.status = query.status;
 
   return params;
 };

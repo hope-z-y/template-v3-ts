@@ -7,9 +7,9 @@
  * - createUserColumns：生成 Naive UI 表格列（含自定义 render）
  */
 
-import type { IAuditable, IUser } from "@/api/types";
+import type { Gender, IAuditable, IUser } from "@/api/types";
 import { useUserStore } from "@/stores";
-import { RenderColumnTitle, StatusMap, type NaiveType } from "@/utils";
+import { RenderColumnTitle, type NaiveType } from "@/utils";
 import CalendarLtr24Regular from "@vicons/fluent/es/CalendarLtr24Regular";
 import Delete24Regular from "@vicons/fluent/es/Delete24Regular";
 import Edit24Regular from "@vicons/fluent/es/Edit24Regular";
@@ -31,22 +31,22 @@ export type IUserRow = IUser & IAuditable;
 // #region 下拉选项与映射
 /** 用户状态选项（表单 / 筛选复用） */
 export const statusOptions = [
-  { label: "启用", value: 1 },
-  { label: "禁用", value: 0 },
+  { label: "启用", value: "enabled" },
+  { label: "禁用", value: "disabled" },
 ];
 
 /** 性别选项 */
 export const genderOptions = [
-  { label: "未知", value: 0 },
-  { label: "男", value: 1 },
-  { label: "女", value: 2 },
+  { label: "未知", value: "unknown" },
+  { label: "男", value: "male" },
+  { label: "女", value: "female" },
 ];
 
-/** 性别数值 -> 展示文案 */
-export const genderMap: Record<number, string> = {
-  0: "未知",
-  1: "男",
-  2: "女",
+/** 性别枚举 -> 展示文案 */
+export const genderMap: Record<Gender, string> = {
+  unknown: "未知",
+  male: "男",
+  female: "女",
 };
 // #endregion
 
@@ -151,7 +151,7 @@ export const createUserColumns = (options: IUserColumnOptions): DataTableColumns
       resizable: true,
       align: "center",
       titleAlign: "center",
-      render: (row) => genderMap[Number(row.gender)] ?? "未知",
+      render: (row) => genderMap[row.gender] ?? "未知",
     },
     {
       title: RenderColumnTitle(Organization24Regular, "所属部门"),
@@ -162,7 +162,7 @@ export const createUserColumns = (options: IUserColumnOptions): DataTableColumns
       align: "center",
       titleAlign: "center",
       ellipsis: { tooltip: true },
-      render: (row) => row.dept?.deptName ?? "无部门",
+      render: (row) => row.department?.deptName ?? "无部门",
     },
     {
       title: RenderColumnTitle(Status24Regular, "状态"),
@@ -174,7 +174,10 @@ export const createUserColumns = (options: IUserColumnOptions): DataTableColumns
       titleAlign: "center",
       // StatusMap 统一维护状态文案与 Tag 颜色
       render: (row) => {
-        const current = StatusMap.get(row.status) ?? { label: "未知", type: "error" };
+        const current =
+          row.status === "enabled"
+            ? { label: "启用", type: "success" as const }
+            : { label: "禁用", type: "error" as const };
         return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
       },
     },
@@ -199,10 +202,10 @@ export const createUserColumns = (options: IUserColumnOptions): DataTableColumns
           {
             default: () =>
               [
-                userStore.hasPermission("system:user:edit")
+                userStore.hasPermission("system:user:update")
                   ? renderActionButton("编辑", Edit24Regular, "primary", () => onEdit(row))
                   : null,
-                onResetPassword && userStore.hasPermission("system:user:reset-password")
+                onResetPassword && userStore.hasPermission("system:user:update")
                   ? renderActionButton("重置密码", KeyReset24Regular, "warning", () => onResetPassword(row))
                   : null,
                 userStore.hasPermission("system:user:delete")

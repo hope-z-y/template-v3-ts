@@ -4,8 +4,8 @@
   <Page v-model:column-options="columnOptions" title="登录日志" @refresh="getLoginLogList">
     <template #search>
       <SearchForm :model="query" :columns="3" @search="handleSearch" @reset="handleReset">
-        <NFormItem label="登录账号" path="account">
-          <NInput v-model:value="query.account" placeholder="请输入登录账号" clearable />
+        <NFormItem label="登录用户" path="username">
+          <NInput v-model:value="query.username" placeholder="请输入登录用户" clearable />
         </NFormItem>
         <NFormItem label="登录状态" path="status">
           <NSelect
@@ -20,7 +20,7 @@
     </template>
 
     <template #toolbar>
-      <Permission value="monitor:login-log:delete">
+      <Permission value="system:login-log:delete">
         <NButton type="error" @click="handleClean">
           <template #icon>
             <NIcon :component="Delete24Regular" />
@@ -49,16 +49,16 @@
 
   <NModal v-model:show="detailVisible" preset="card" style="width: 560px" title="登录日志详情">
     <NDescriptions v-if="detailRecord" :column="1" bordered label-placement="left">
-      <NDescriptionsItem label="登录账号">{{ detailRecord.account }}</NDescriptionsItem>
-      <NDescriptionsItem label="登录 IP">{{ detailRecord.ip || "-" }}</NDescriptionsItem>
-      <NDescriptionsItem label="登录地点">{{ detailRecord.location || "-" }}</NDescriptionsItem>
+      <NDescriptionsItem label="登录用户">{{ detailRecord.username || "-" }}</NDescriptionsItem>
+      <NDescriptionsItem label="登录 IP">{{ detailRecord.loginIp || "-" }}</NDescriptionsItem>
+      <NDescriptionsItem label="登录地点">{{ detailRecord.loginLocation || "-" }}</NDescriptionsItem>
       <NDescriptionsItem label="浏览器">{{ detailRecord.browser || "-" }}</NDescriptionsItem>
       <NDescriptionsItem label="操作系统">{{ detailRecord.os || "-" }}</NDescriptionsItem>
       <NDescriptionsItem label="登录状态">
-        {{ loginStatusMap[Number(detailRecord.status)]?.label ?? "未知" }}
+        {{ loginStatusMap[detailRecord.status]?.label ?? "未知" }}
       </NDescriptionsItem>
-      <NDescriptionsItem label="提示消息">{{ detailRecord.msg || "-" }}</NDescriptionsItem>
-      <NDescriptionsItem label="登录时间">{{ detailRecord.loginTime }}</NDescriptionsItem>
+      <NDescriptionsItem label="提示消息">{{ detailRecord.message || "-" }}</NDescriptionsItem>
+      <NDescriptionsItem label="登录时间">{{ detailRecord.loginAt }}</NDescriptionsItem>
     </NDescriptions>
   </NModal>
 </template>
@@ -94,13 +94,10 @@ const message = useMessage();
 const dialog = useDialog();
 const { confirmDelete } = useDeleteConfirm();
 
-interface LoginLogQuery {
-  account?: string;
-  status?: number;
-}
+type LoginLogQuery = Pick<IQueryLoginLogParams, "username" | "status">;
 
 const createDefaultQuery = (): LoginLogQuery => ({
-  account: undefined,
+  username: undefined,
   status: undefined,
 });
 
@@ -114,8 +111,8 @@ const buildQueryParams = (page: number, pageSize: number): IQueryLoginLogParams 
     pageSize,
   };
 
-  const account = query.account?.trim();
-  if (account) params.account = account;
+  const username = query.username?.trim();
+  if (username) params.username = username;
   if (query.status !== undefined && query.status !== null) params.status = query.status;
 
   return params;
@@ -179,17 +176,17 @@ const handleClean = () => {
 // 列显隐持久化到本地，刷新页面后仍保留用户上次选择。
 const { columnOptions, visibleKeys } = useColumnVisibility(
   [
-    { key: "account", title: "登录账号", visible: true },
-    { key: "ip", title: "登录 IP", visible: true },
-    { key: "location", title: "登录地点", visible: true },
+    { key: "username", title: "登录用户", visible: true },
+    { key: "loginIp", title: "登录 IP", visible: true },
+    { key: "loginLocation", title: "登录地点", visible: true },
     { key: "browser", title: "浏览器", visible: true },
     { key: "os", title: "操作系统", visible: true },
     { key: "status", title: "登录状态", visible: true },
-    { key: "msg", title: "提示消息", visible: true },
-    { key: "loginTime", title: "登录时间", visible: true },
+    { key: "message", title: "提示消息", visible: true },
+    { key: "loginAt", title: "登录时间", visible: true },
     { key: "actions", title: "操作", visible: true, disabled: true },
   ],
-  "monitor:login-log:columns",
+  "system:login-log:columns",
 );
 
 const columns = computed<DataTableColumns<ILoginLog>>(() => {

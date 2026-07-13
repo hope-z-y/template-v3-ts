@@ -1,81 +1,52 @@
-import type { IAuditable, IPagination, IPaginationData } from "../../common";
+import type { IPagination, IPaginationData } from "../../common";
+import type { CommonStatus, EntityId, ISystemAudit } from "../common";
 
-/** POST /system/dict/types 请求体 */
-export interface ICreateDictTypeParams {
-  /** 字典名称 */
-  dictName: string;
-  /** 字典类型（唯一标识） */
-  dictType: string;
-  /** 状态：1启用 0禁用 */
-  status?: number;
-  /** 备注 */
-  remark?: string;
-}
-
-/** PATCH /system/dict/types/:id 请求体 */
-export type IUpdateDictTypeParams = Partial<ICreateDictTypeParams>;
-
-/** 字典类型实体 */
-export interface IDictType extends IAuditable {
-  id: number;
-  dictName: string;
-  dictType: string;
-  status: number;
-  remark: string | null;
-}
-
-/** GET /system/dict/types 响应体 */
-export type IGetDictTypeListResponse = IDictType[];
-
-/** GET /system/dict/data 查询参数 */
-export interface IQueryDictDataParams extends IPagination {
-  /** 字典类型 */
+export interface IQueryDictTypeParams extends IPagination {
+  dictName?: string;
   dictType?: string;
-  /** 字典标签（模糊匹配） */
-  dictLabel?: string;
+  status?: CommonStatus;
 }
-
-/** POST /system/dict/data 请求体 */
-export interface ICreateDictDataParams {
-  /** 字典类型 */
+export interface ICreateDictTypeParams {
+  dictName: string;
   dictType: string;
-  /** 字典标签（展示用） */
-  dictLabel: string;
-  /** 字典键值（存储用） */
-  dictValue: string;
-  /** 显示顺序 */
-  dictSort?: number;
-  /** 样式属性（CSS class） */
-  cssClass?: string;
-  /** 表格回显样式 */
-  listClass?: string;
-  /** 是否默认：0否 1是 */
-  isDefault?: number;
-  /** 状态：1启用 0禁用 */
-  status?: number;
-  /** 备注 */
+  status?: CommonStatus;
   remark?: string;
 }
-
-/** PATCH /system/dict/data/:id 请求体 */
-export type IUpdateDictDataParams = Partial<ICreateDictDataParams>;
-
-/** 字典数据实体 */
-export interface IDictData extends IAuditable {
-  id: number;
+export type IUpdateDictTypeParams = Partial<ICreateDictTypeParams>;
+export interface IDictType extends ISystemAudit {
+  dictName: string;
   dictType: string;
+  status: CommonStatus;
+}
+export type IGetDictTypeListResponse = IPaginationData<IDictType>;
+
+export interface IQueryDictDataParams extends IPagination {
+  dictTypeId?: EntityId;
+  dictLabel?: string;
+  dictValue?: string;
+  status?: CommonStatus;
+}
+export interface ICreateDictDataParams {
+  dictTypeId: EntityId;
   dictLabel: string;
   dictValue: string;
-  dictSort: number;
+  cssClass?: string;
+  listClass?: string;
+  isDefault?: boolean;
+  sort?: number;
+  status?: CommonStatus;
+  remark?: string;
+}
+export type IUpdateDictDataParams = Partial<ICreateDictDataParams>;
+export interface IDictData extends ISystemAudit {
+  dictTypeId: EntityId;
+  dictLabel: string;
+  dictValue: string;
   cssClass: string | null;
   listClass: string | null;
-  isDefault: number;
-  status: number;
-  remark: string | null;
+  isDefault: boolean;
+  sort: number;
+  status: CommonStatus;
 }
-
-/** GET /system/dict/data 响应体 */
 export type IGetDictDataListResponse = IPaginationData<IDictData>;
-
-/** GET /system/dict/data/type/:dictType 响应体 */
 export type IGetDictDataByTypeResponse = IDictData[];
