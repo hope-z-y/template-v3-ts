@@ -1,15 +1,7 @@
-﻿<!-- 字典管理 -> 字典类型表单 -->
+﻿<!-- 字典管理 -> 字典类型表单（useModal 内容方） -->
 
 <template>
-  <NModal
-    v-model:show="visible"
-    preset="dialog"
-    style="width: 40vw"
-    :title="mode === 'create' ? '新增字典类型' : '编辑字典类型'"
-    :mask-closable="false"
-    :show-icon="false"
-    @after-leave="handleAfterLeave"
-  >
+  <Modal>
     <NForm ref="formRef" :model="formModel" :rules="rules" label-placement="left" label-width="80">
       <NFormItem label="字典名称" path="dictName">
         <NInput v-model:value="formModel.dictName" placeholder="请输入字典名称" maxlength="50" show-count />
@@ -26,7 +18,7 @@
       <NFormItem label="状态" path="status">
         <NRadioGroup v-model:value="formModel.status">
           <NSpace>
-            <NRadio v-for="item in statusOptions" :key="item.value" :value="item.value">
+            <NRadio v-for="item in CommonStatusOptions" :key="item.value" :value="item.value">
               {{ item.label }}
             </NRadio>
           </NSpace>
@@ -43,25 +35,17 @@
         />
       </NFormItem>
     </NForm>
-
-    <template #action>
-      <div class="flex justify-end gap-2">
-        <NButton @click="visible = false">取消</NButton>
-        <NButton type="primary" :loading="submitting" @click="handleSubmit">确定</NButton>
-      </div>
-    </template>
-  </NModal>
+  </Modal>
 </template>
 
 <script setup lang="ts">
 import { CreateDictType, GetDictTypeById, UpdateDictType } from "@/api/system-management";
 import type { CommonStatus, ICreateDictTypeParams, IUpdateDictTypeParams } from "@/api/types";
+import { useModal } from "@/hooks";
 import {
-  NButton,
   NForm,
   NFormItem,
   NInput,
-  NModal,
   NRadio,
   NRadioGroup,
   NSpace,
@@ -69,8 +53,9 @@ import {
   type FormInst,
   type FormRules,
 } from "naive-ui";
-import { ref, watch } from "vue";
-import { statusOptions, type IDictTypeRow } from "../data";
+import { CommonStatusOptions } from "@/utils/constant";
+import { computed, ref } from "vue";
+import type { IDictTypeModalData } from "../data";
 
 interface TypeFormModel {
   dictName: string;
@@ -86,29 +71,40 @@ const createDefaultForm = (): TypeFormModel => ({
   remark: "",
 });
 
-const props = defineProps<{
-  mode: "create" | "edit";
-  record?: IDictTypeRow | null;
-}>();
-
 const emit = defineEmits<{ success: [] }>();
-const visible = defineModel<boolean>("show", { required: true });
 
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
-const submitting = ref(false);
 const formModel = ref<TypeFormModel>(createDefaultForm());
+
+const [Modal, modalApi] = useModal<IDictTypeModalData>({
+  title: (data) => (data?.mode === "edit" ? "编辑字典类型" : "新增字典类型"),
+  onConfirm: handleSubmit,
+  onOpened: handleOpened,
+  onClosed: () => {
+    formRef.value?.restoreValidation();
+    formModel.value = createDefaultForm();
+  },
+});
+
+const mode = computed(() => modalApi.getData()?.mode ?? "create");
 
 const rules: FormRules = {
   dictName: [{ required: true, message: "请输入字典名称", trigger: ["input", "blur"] }],
   dictType: [{ required: true, message: "请输入字典类型", trigger: ["input", "blur"] }],
 };
 
-const loadDetail = async () => {
-  if (props.mode !== "edit" || !props.record) return;
+/** 弹窗打开：编辑模式拉详情回填（失败降级用行数据），新增模式用默认值 */
+async function handleOpened(data: IDictTypeModalData) {
+  if (data?.mode !== "edit" || !data.record) {
+    formModel.value = createDefaultForm();
+    return;
+  }
+
+  const record = data.record;
 
   try {
-    const detail = await GetDictTypeById(props.record.id);
+    const detail = await GetDictTypeById(record.id);
     formModel.value = {
       dictName: detail.dictName,
       dictType: detail.dictType,
@@ -116,30 +112,17 @@ const loadDetail = async () => {
       remark: detail.remark ?? "",
     };
   } catch {
-    resetFormFromRecord();
-  }
-};
-
-const resetFormFromRecord = () => {
-  if (props.mode === "edit" && props.record) {
     formModel.value = {
-      dictName: props.record.dictName,
-      dictType: props.record.dictType,
-      status: props.record.status,
-      remark: props.record.remark ?? "",
+      dictName: record.dictName,
+      dictType: record.dictType,
+      status: record.status,
+      remark: record.remark ?? "",
     };
-    return;
   }
+}
 
-  formModel.value = createDefaultForm();
-};
-
-const handleAfterLeave = () => {
-  formRef.value?.restoreValidation();
-  formModel.value = createDefaultForm();
-};
-
-const handleSubmit = async () => {
+/** 点击"确定"：校验 -> 提交 -> 关闭并通知列表刷新 */
+async function handleSubmit() {
   try {
     await formRef.value?.validate();
   } catch {
@@ -153,36 +136,27 @@ const handleSubmit = async () => {
     remark: formModel.value.remark.trim() || undefined,
   };
 
-  try {
-    submitting.value = true;
+  const data = modalApi.getData();
 
-    if (props.mode === "edit" && props.record) {
-      await UpdateDictType(props.record.id, payload);
+  try {
+    modalApi.lock();
+
+    if (data?.mode === "edit" && data.record) {
+      await UpdateDictType(data.record.id, payload);
       message.success("修改成功");
     } else {
       await CreateDictType(payload as ICreateDictTypeParams);
       message.success("新增成功");
     }
 
-    visible.value = false;
+    modalApi.close();
     emit("success");
   } catch {
     // 错误提示由响应拦截器统一处理
   } finally {
-    submitting.value = false;
+    modalApi.unlock();
   }
-};
-
-watch(
-  () => visible.value,
-  async (show) => {
-    if (!show) return;
-
-    if (props.mode === "edit") {
-      await loadDetail();
-    } else {
-      resetFormFromRecord();
-    }
-  },
-);
+}
 </script>
+
+<style scoped></style>

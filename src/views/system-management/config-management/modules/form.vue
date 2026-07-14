@@ -1,15 +1,7 @@
-﻿<!-- 参数设置 -> 新增 / 编辑表单 -->
+﻿<!-- 参数设置 -> 新增 / 编辑表单（useModal 内容方） -->
 
 <template>
-  <NModal
-    v-model:show="visible"
-    preset="dialog"
-    style="width: 40vw"
-    :title="mode === 'create' ? '新增参数' : '编辑参数'"
-    :mask-closable="false"
-    :show-icon="false"
-    @after-leave="handleAfterLeave"
-  >
+  <Modal>
     <NForm ref="formRef" :model="formModel" :rules="rules" label-placement="left" label-width="80">
       <NFormItem label="参数名称" path="paramName">
         <NInput
@@ -42,7 +34,7 @@
       <NFormItem label="参数类型" path="paramType">
         <NRadioGroup v-model:value="formModel.paramType">
           <NSpace>
-            <NRadio v-for="item in configTypeOptions" :key="item.value" :value="item.value">
+            <NRadio v-for="item in ConfigTypeOptions" :key="item.value" :value="item.value">
               {{ item.label }}
             </NRadio>
           </NSpace>
@@ -59,25 +51,17 @@
         />
       </NFormItem>
     </NForm>
-
-    <template #action>
-      <div class="flex justify-end gap-2">
-        <NButton @click="visible = false">取消</NButton>
-        <NButton type="primary" :loading="submitting" @click="handleSubmit">确定</NButton>
-      </div>
-    </template>
-  </NModal>
+  </Modal>
 </template>
 
 <script setup lang="ts">
 import { CreateConfig, GetConfigById, UpdateConfig } from "@/api/system-management";
 import type { ICreateConfigParams, IUpdateConfigParams } from "@/api/types";
+import { useModal } from "@/hooks";
 import {
-  NButton,
   NForm,
   NFormItem,
   NInput,
-  NModal,
   NRadio,
   NRadioGroup,
   NSpace,
@@ -85,8 +69,9 @@ import {
   type FormInst,
   type FormRules,
 } from "naive-ui";
-import { computed, ref, watch } from "vue";
-import { configTypeOptions, type IConfigRow } from "../data";
+import { ConfigTypeOptions } from "@/utils/constant";
+import { computed, ref } from "vue";
+import type { IConfigModalData } from "../data";
 
 interface ConfigFormModel {
   paramName: string;
@@ -106,20 +91,29 @@ const createDefaultForm = (): ConfigFormModel => ({
   remark: "",
 });
 
-const props = defineProps<{
-  mode: "create" | "edit";
-  record?: IConfigRow | null;
-}>();
-
 const emit = defineEmits<{ success: [] }>();
-const visible = defineModel<boolean>("show", { required: true });
 
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
-const submitting = ref(false);
 const formModel = ref<ConfigFormModel>(createDefaultForm());
 
-const isBuiltIn = computed(() => props.mode === "edit" && props.record?.paramType === "system");
+const [Modal, modalApi] = useModal<IConfigModalData>({
+  title: (data) => (data?.mode === "edit" ? "编辑参数" : "新增参数"),
+  onConfirm: handleSubmit,
+  onOpened: handleOpened,
+  onClosed: () => {
+    formRef.value?.restoreValidation();
+    formModel.value = createDefaultForm();
+  },
+});
+
+const mode = computed(() => modalApi.getData()?.mode ?? "create");
+
+/** 内置参数只允许改键值和备注 */
+const isBuiltIn = computed(() => {
+  const data = modalApi.getData();
+  return data?.mode === "edit" && data.record?.paramType === "system";
+});
 
 const rules: FormRules = {
   paramName: [{ required: true, message: "请输入参数名称", trigger: ["input", "blur"] }],
@@ -127,11 +121,17 @@ const rules: FormRules = {
   paramValue: [{ required: true, message: "请输入参数键值", trigger: ["input", "blur"] }],
 };
 
-const loadDetail = async () => {
-  if (props.mode !== "edit" || !props.record) return;
+/** 弹窗打开：编辑模式拉详情回填（失败降级用行数据），新增模式用默认值 */
+async function handleOpened(data: IConfigModalData) {
+  if (data?.mode !== "edit" || !data.record) {
+    formModel.value = createDefaultForm();
+    return;
+  }
+
+  const record = data.record;
 
   try {
-    const detail = await GetConfigById(props.record.id);
+    const detail = await GetConfigById(record.id);
     formModel.value = {
       paramName: detail.paramName,
       paramKey: detail.paramKey,
@@ -141,32 +141,19 @@ const loadDetail = async () => {
       remark: detail.remark ?? "",
     };
   } catch {
-    resetFormFromRecord();
-  }
-};
-
-const resetFormFromRecord = () => {
-  if (props.mode === "edit" && props.record) {
     formModel.value = {
-      paramName: props.record.paramName,
-      paramKey: props.record.paramKey,
-      paramValue: props.record.paramValue,
-      paramType: props.record.paramType,
-      isEncrypted: props.record.isEncrypted,
-      remark: props.record.remark ?? "",
+      paramName: record.paramName,
+      paramKey: record.paramKey,
+      paramValue: record.paramValue,
+      paramType: record.paramType,
+      isEncrypted: record.isEncrypted,
+      remark: record.remark ?? "",
     };
-    return;
   }
+}
 
-  formModel.value = createDefaultForm();
-};
-
-const handleAfterLeave = () => {
-  formRef.value?.restoreValidation();
-  formModel.value = createDefaultForm();
-};
-
-const handleSubmit = async () => {
+/** 点击"确定"：校验 -> 提交 -> 关闭并通知列表刷新 */
+async function handleSubmit() {
   try {
     await formRef.value?.validate();
   } catch {
@@ -182,36 +169,27 @@ const handleSubmit = async () => {
     remark: formModel.value.remark.trim() || undefined,
   };
 
-  try {
-    submitting.value = true;
+  const data = modalApi.getData();
 
-    if (props.mode === "edit" && props.record) {
-      await UpdateConfig(props.record.id, payload);
+  try {
+    modalApi.lock();
+
+    if (data?.mode === "edit" && data.record) {
+      await UpdateConfig(data.record.id, payload);
       message.success("修改成功");
     } else {
       await CreateConfig(payload as ICreateConfigParams);
       message.success("新增成功");
     }
 
-    visible.value = false;
+    modalApi.close();
     emit("success");
   } catch {
     // 错误提示由响应拦截器统一处理
   } finally {
-    submitting.value = false;
+    modalApi.unlock();
   }
-};
-
-watch(
-  () => visible.value,
-  async (show) => {
-    if (!show) return;
-
-    if (props.mode === "edit") {
-      await loadDetail();
-    } else {
-      resetFormFromRecord();
-    }
-  },
-);
+}
 </script>
+
+<style scoped></style>

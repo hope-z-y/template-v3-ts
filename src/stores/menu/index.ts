@@ -1,12 +1,6 @@
 import type { IProfileMenu } from "@/api/types";
 import { registerDynamicRoutes, resetDynamicRoutes } from "@/router/modules/dynamic-routes";
-import {
-  BuildMenuIconMap,
-  EnsureHomeMenuOption,
-  MenusToOptions,
-  STORE_KEY,
-  type RouteMenuOption,
-} from "@/utils";
+import { BuildMenuIconMap, EnsureHomeMenuOption, MenusToOptions, STORE_KEY, type RouteMenuOption } from "@/utils";
 import { defineStore } from "pinia";
 import { ref } from "vue";
 

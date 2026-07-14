@@ -50,3 +50,4 @@ export interface IDictData extends ISystemAudit {
 }
 export type IGetDictDataListResponse = IPaginationData<IDictData>;
 export type IGetDictDataByTypeResponse = IDictData[];
+export type IGetAllDictDataResponse = Record<string, IDictData[]>;

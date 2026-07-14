@@ -1,15 +1,6 @@
-/**
- * 用户管理 - 表格列与公共选项配置
- *
- * 本文件集中维护：
- * - 表格行类型 IUserRow
- * - 状态 / 性别等下拉选项
- * - createUserColumns：生成 Naive UI 表格列（含自定义 render）
- */
-
-import type { Gender, IAuditable, IUser } from "@/api/types";
-import { useUserStore } from "@/stores";
-import { RenderColumnTitle, type NaiveType } from "@/utils";
+import type { IAuditable, IQueryUserParams, IUser } from "@/api/types";
+import type { PageColumn, SearchFieldSchema } from "@/hooks";
+import { CommonStatusOptions, GenderMap } from "@/utils/constant";
 import CalendarLtr24Regular from "@vicons/fluent/es/CalendarLtr24Regular";
 import Delete24Regular from "@vicons/fluent/es/Delete24Regular";
 import Edit24Regular from "@vicons/fluent/es/Edit24Regular";
@@ -20,201 +11,183 @@ import Organization24Regular from "@vicons/fluent/es/Organization24Regular";
 import Person24Regular from "@vicons/fluent/es/Person24Regular";
 import Phone24Regular from "@vicons/fluent/es/Phone24Regular";
 import Status24Regular from "@vicons/fluent/es/Status24Regular";
-import { NAvatar, NButton, NIcon, NSpace, NTag, type DataTableColumns } from "naive-ui";
-import { h, type Component } from "vue";
+import { NAvatar, NTag, type TreeSelectOption } from "naive-ui";
+import { h } from "vue";
 
-// #region 类型定义
 /** 表格行数据 = 用户基础信息 + 审计字段（创建时间等） */
 export type IUserRow = IUser & IAuditable;
-// #endregion
 
-// #region 下拉选项与映射
-/** 用户状态选项（表单 / 筛选复用） */
-export const statusOptions = [
-  { label: "启用", value: "enabled" },
-  { label: "禁用", value: "disabled" },
-];
-
-/** 性别选项 */
-export const genderOptions = [
-  { label: "未知", value: "unknown" },
-  { label: "男", value: "male" },
-  { label: "女", value: "female" },
-];
-
-/** 性别枚举 -> 展示文案 */
-export const genderMap: Record<Gender, string> = {
-  unknown: "未知",
-  male: "男",
-  female: "女",
-};
-// #endregion
-
-// #region 操作按钮渲染
-/**
- * 渲染表格「操作」列中的文字按钮（带图标）
- * 使用 h() 创建虚拟 DOM，是 Naive UI 自定义列 render 的常见写法
- */
-const renderActionButton = (label: string, icon: Component, type: NaiveType, onClick: () => void) => {
-  return h(
-    NButton,
-    { text: true, type, onClick },
-    {
-      icon: () => h(NIcon, null, { default: () => h(icon) }),
-      default: () => label,
-    },
-  );
-};
-// #endregion
-
-// #region 列配置入参类型
-/** createUserColumns 所需的操作回调，由 index.vue 传入 */
-export interface IUserColumnOptions {
-  onEdit: (row: IUserRow) => void;
-  onDelete: (row: IUserRow) => void;
-  onResetPassword?: (row: IUserRow) => void;
+/** 搜索区的查询模型 */
+export interface IUserQuery {
+  account?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  status?: IQueryUserParams["status"];
+  deptId?: string | null;
 }
-// #endregion
 
-// #region 头像首字母工具
-/** 无头像时，取用户名/账号首字母作为 Avatar 占位 */
+/** 新增 / 编辑弹窗的共享数据：由列表页 setData 传入，表单通过 modalApi.getData() 读取 */
+export interface IUserModalData {
+  mode: "create" | "edit";
+  record: IUserRow | null;
+}
+
+/**
+ * 搜索表单 schema 工厂：部门树 options 是页面里异步加载的响应式数据，
+ * 通过 getter 注入（schema 的 props 支持函数形式，每次渲染取最新值）
+ */
+export const CreateSearchSchema = (deps: {
+  getDeptTreeOptions: () => TreeSelectOption[];
+  getDeptTreeLoading: () => boolean;
+}): SearchFieldSchema<IUserQuery>[] => [
+  { field: "account", label: "登录账号" },
+  { field: "username", label: "用户名称" },
+  { field: "phone", label: "手机号" },
+  { field: "email", label: "邮箱" },
+  { field: "status", label: "状态", component: "select", props: { options: CommonStatusOptions } },
+  {
+    field: "deptId",
+    label: "所属部门",
+    component: "tree-select",
+    props: () => ({
+      options: deps.getDeptTreeOptions(),
+      loading: deps.getDeptTreeLoading(),
+      defaultExpandAll: true,
+      keyField: "key",
+      labelField: "label",
+      childrenField: "children",
+    }),
+  },
+];
+
+/** deptId 需要转成数组，默认构建规则覆盖不了，自定义 buildParams */
+export const BuildUserParams = (query: IUserQuery, page: number, pageSize: number): IQueryUserParams => {
+  const params: IQueryUserParams = { pageNum: page, pageSize };
+
+  const account = query.account?.trim();
+  const username = query.username?.trim();
+  const phone = query.phone?.trim();
+  const email = query.email?.trim();
+
+  if (account) params.account = account;
+  if (username) params.username = username;
+  if (phone) params.phone = phone;
+  if (email) params.email = email;
+  if (query.status) params.status = query.status;
+  if (query.deptId) params.deptId = [query.deptId];
+
+  return params;
+};
+
+/** 无头像时，取用户名 / 账号首字母作为 Avatar 占位 */
 const getDisplayInitial = (row: IUserRow) => {
   const name = row.username?.trim() || row.account?.trim() || "?";
   return name.slice(0, 1).toUpperCase();
 };
-// #endregion
 
-// #region 表格列定义
-/**
- * 生成用户管理表格的全部业务列
- * @param options 行内「编辑 / 删除 / 重置密码」回调
- */
-export const createUserColumns = (options: IUserColumnOptions): DataTableColumns<IUserRow> => {
-  const { onEdit, onDelete, onResetPassword } = options;
-  const userStore = useUserStore();
-
-  return [
-    {
-      title: RenderColumnTitle(Person24Regular, "用户名"),
-      key: "username",
-      minWidth: 140,
-      maxWidth: 240,
-      resizable: true,
-      align: "center",
-      titleAlign: "center",
-      ellipsis: { tooltip: true },
-      // 头像 + 用户名组合展示
-      render: (row) =>
-        h("span", { class: "inline-flex items-center justify-center gap-2" }, [
-          row.avatar
-            ? h(NAvatar, { round: true, size: "small", src: row.avatar })
-            : h(NAvatar, { round: true, size: "small" }, { default: () => getDisplayInitial(row) }),
-          row.username || row.account || "-",
-        ]),
-    },
-    {
-      title: RenderColumnTitle(Person24Regular, "账号"),
-      key: "account",
-      minWidth: 120,
-      resizable: true,
-      maxWidth: 240,
-      align: "center",
-      titleAlign: "center",
-      render: (row) => row.account || "-",
-    },
-    {
-      title: RenderColumnTitle(Phone24Regular, "手机号"),
-      key: "phone",
-      minWidth: 140,
-      resizable: true,
-      maxWidth: 180,
-      align: "center",
-      titleAlign: "center",
-      render: (row) => row.phone || "-",
-    },
-    {
-      title: RenderColumnTitle(Mail24Regular, "邮箱"),
-      key: "email",
-      minWidth: 180,
-      maxWidth: 220,
-      resizable: true,
-      align: "center",
-      titleAlign: "center",
-      ellipsis: { tooltip: true },
-      render: (row) => row.email || "-",
-    },
-    {
-      title: RenderColumnTitle(Person24Regular, "性别"),
-      key: "gender",
-      minWidth: 90,
-      maxWidth: 120,
-      resizable: true,
-      align: "center",
-      titleAlign: "center",
-      render: (row) => genderMap[row.gender] ?? "未知",
-    },
-    {
-      title: RenderColumnTitle(Organization24Regular, "所属部门"),
-      key: "deptId",
-      minWidth: 140,
-      maxWidth: 180,
-      resizable: true,
-      align: "center",
-      titleAlign: "center",
-      ellipsis: { tooltip: true },
-      render: (row) => row.department?.deptName ?? "无部门",
-    },
-    {
-      title: RenderColumnTitle(Status24Regular, "状态"),
-      key: "status",
-      minWidth: 100,
-      maxWidth: 180,
-      resizable: true,
-      align: "center",
-      titleAlign: "center",
-      // StatusMap 统一维护状态文案与 Tag 颜色
-      render: (row) => {
-        const current =
-          row.status === "enabled"
-            ? { label: "启用", type: "success" as const }
-            : { label: "禁用", type: "error" as const };
-        return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
+/** 列定义工厂：编辑 / 重置密码回调由页面注入 */
+export const CreateColumns = (handlers: {
+  onEdit: (row: IUserRow) => void;
+  onResetPassword: (row: IUserRow) => void;
+}): PageColumn<IUserRow>[] => [
+  { type: "selection" },
+  { type: "index" },
+  {
+    key: "username",
+    title: "用户名",
+    icon: Person24Regular,
+    minWidth: 140,
+    maxWidth: 240,
+    ellipsis: { tooltip: true },
+    // 头像 + 用户名组合展示
+    render: (row) =>
+      h("span", { class: "inline-flex items-center justify-center gap-2" }, [
+        row.avatar
+          ? h(NAvatar, { round: true, size: "small", src: row.avatar })
+          : h(NAvatar, { round: true, size: "small" }, { default: () => getDisplayInitial(row) }),
+        row.username || row.account || "-",
+      ]),
+  },
+  {
+    key: "account",
+    title: "账号",
+    icon: Person24Regular,
+    minWidth: 120,
+    maxWidth: 240,
+    render: (row) => row.account || "-",
+  },
+  {
+    key: "phone",
+    title: "手机号",
+    icon: Phone24Regular,
+    minWidth: 140,
+    maxWidth: 180,
+    render: (row) => row.phone || "-",
+  },
+  {
+    key: "email",
+    title: "邮箱",
+    icon: Mail24Regular,
+    minWidth: 180,
+    maxWidth: 220,
+    ellipsis: { tooltip: true },
+    render: (row) => row.email || "-",
+  },
+  {
+    key: "gender",
+    title: "性别",
+    icon: Person24Regular,
+    minWidth: 90,
+    maxWidth: 120,
+    render: (row) => GenderMap[row.gender] ?? "未知",
+  },
+  {
+    key: "deptId",
+    title: "所属部门",
+    icon: Organization24Regular,
+    minWidth: 140,
+    maxWidth: 180,
+    ellipsis: { tooltip: true },
+    render: (row) => row.department?.deptName ?? "无部门",
+  },
+  {
+    key: "status",
+    title: "状态",
+    icon: Status24Regular,
+    minWidth: 100,
+    maxWidth: 180,
+    render: (row) =>
+      row.status === "enabled"
+        ? h(NTag, { type: "success", size: "small" }, { default: () => "启用" })
+        : h(NTag, { type: "error", size: "small" }, { default: () => "禁用" }),
+  },
+  { key: "createdAt", title: "创建时间", icon: CalendarLtr24Regular, minWidth: 180 },
+  {
+    type: "actions",
+    icon: Options24Regular,
+    minWidth: 260,
+    actions: [
+      {
+        label: "编辑",
+        icon: Edit24Regular,
+        auth: "system:user:update",
+        onClick: handlers.onEdit,
       },
-    },
-    {
-      title: RenderColumnTitle(CalendarLtr24Regular, "创建时间"),
-      key: "createdAt",
-      width: 180,
-      align: "center",
-      titleAlign: "center",
-    },
-    {
-      title: RenderColumnTitle(Options24Regular, "操作"),
-      key: "actions",
-      width: onResetPassword ? 280 : 180,
-      align: "center",
-      titleAlign: "center",
-      fixed: "right",
-      render: (row) =>
-        h(
-          NSpace,
-          { size: 8, justify: "space-between", inline: true },
-          {
-            default: () =>
-              [
-                userStore.hasPermission("system:user:update")
-                  ? renderActionButton("编辑", Edit24Regular, "primary", () => onEdit(row))
-                  : null,
-                onResetPassword && userStore.hasPermission("system:user:update")
-                  ? renderActionButton("重置密码", KeyReset24Regular, "warning", () => onResetPassword(row))
-                  : null,
-                userStore.hasPermission("system:user:delete")
-                  ? renderActionButton("删除", Delete24Regular, "error", () => onDelete(row))
-                  : null,
-              ].filter(Boolean),
-          },
-        ),
-    },
-  ];
-};
-// #endregion
+      {
+        label: "重置密码",
+        icon: KeyReset24Regular,
+        buttonType: "warning",
+        auth: "system:user:update",
+        onClick: handlers.onResetPassword,
+      },
+      {
+        label: "删除",
+        icon: Delete24Regular,
+        buttonType: "error",
+        auth: "system:user:delete",
+        confirm: (row) => `确定要删除用户「${row.username || row.account}」吗？`,
+      },
+    ],
+  },
+];

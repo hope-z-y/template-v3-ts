@@ -1,6 +1,6 @@
-import type { IRole } from "@/api/types";
-import { useUserStore } from "@/stores";
-import { RenderColumnTitle, type NaiveType } from "@/utils";
+import type { CommonStatus, IRole } from "@/api/types";
+import type { PageColumn, SearchFieldSchema } from "@/hooks";
+import { CommonStatusOptions, DataScopeMap } from "@/utils/constant";
 import CalendarLtr24Regular from "@vicons/fluent/es/CalendarLtr24Regular";
 import Delete24Regular from "@vicons/fluent/es/Delete24Regular";
 import Edit24Regular from "@vicons/fluent/es/Edit24Regular";
@@ -8,127 +8,74 @@ import Options24Regular from "@vicons/fluent/es/Options24Regular";
 import Shield24Regular from "@vicons/fluent/es/Shield24Regular";
 import Status24Regular from "@vicons/fluent/es/Status24Regular";
 import TextNumberFormat24Regular from "@vicons/fluent/es/TextNumberFormat24Regular";
-import { NButton, NIcon, NSpace, NTag, type DataTableColumns } from "naive-ui";
-import { h, type Component } from "vue";
+import { NTag } from "naive-ui";
+import { h } from "vue";
 
+/** 列表行数据类型（与接口返回的角色实体一致） */
 export type IRoleRow = IRole;
 
-export const statusOptions = [
-  { label: "启用", value: "enabled" },
-  { label: "禁用", value: "disabled" },
-];
-
-export const dataScopeOptions = [
-  { label: "全部数据权限", value: "all" },
-  { label: "自定义数据权限", value: "custom" },
-  { label: "本部门数据权限", value: "department" },
-  { label: "本部门及以下数据权限", value: "department_and_children" },
-  { label: "仅本人数据权限", value: "self" },
-];
-
-export const dataScopeMap: Record<string, string> = {
-  all: "全部数据权限",
-  custom: "自定义数据权限",
-  department: "本部门数据权限",
-  department_and_children: "本部门及以下数据权限",
-  self: "仅本人数据权限",
-};
-
-const renderActionButton = (label: string, icon: Component, type: NaiveType, onClick: () => void) => {
-  return h(
-    NButton,
-    { text: true, type, onClick },
-    {
-      icon: () => h(NIcon, null, { default: () => h(icon) }),
-      default: () => label,
-    },
-  );
-};
-
-export interface IRoleColumnHandlers {
-  onEdit: (row: IRoleRow) => void;
-  onDelete: (row: IRoleRow) => void;
+/** 搜索区的查询模型 */
+export interface IRoleQuery {
+  roleName?: string;
+  roleKey?: string;
+  status?: CommonStatus;
 }
 
-export const createRoleColumns = (handlers: IRoleColumnHandlers): DataTableColumns<IRoleRow> => {
-  const userStore = useUserStore();
+/** 新增 / 编辑弹窗的共享数据：由列表页 setData 传入，表单通过 modalApi.getData() 读取 */
+export interface IRoleModalData {
+  mode: "create" | "edit";
+  record: IRoleRow | null;
+}
 
-  return [
-    {
-      title: RenderColumnTitle(Shield24Regular, "角色名称"),
-      key: "roleName",
-      minWidth: 140,
-      align: "center",
-      titleAlign: "center",
-      ellipsis: { tooltip: true },
-    },
-    {
-      title: RenderColumnTitle(Shield24Regular, "角色编码"),
-      key: "roleKey",
-      minWidth: 140,
-      align: "center",
-      titleAlign: "center",
-      ellipsis: { tooltip: true },
-    },
-    {
-      title: RenderColumnTitle(TextNumberFormat24Regular, "显示顺序"),
-      key: "roleSort",
-      minWidth: 110,
-      align: "center",
-      titleAlign: "center",
-    },
-    {
-      title: RenderColumnTitle(Shield24Regular, "数据权限"),
-      key: "dataScope",
-      minWidth: 160,
-      align: "center",
-      titleAlign: "center",
-      render: (row) => dataScopeMap[row.dataScope] ?? "未知",
-    },
-    {
-      title: RenderColumnTitle(Status24Regular, "状态"),
-      key: "status",
-      width: 100,
-      align: "center",
-      titleAlign: "center",
-      render: (row) => {
-        const current =
-          row.status === "enabled"
-            ? { label: "启用", type: "success" as const }
-            : { label: "禁用", type: "error" as const };
-        return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
+/** 搜索表单 schema */
+export const SearchSchema: SearchFieldSchema<IRoleQuery>[] = [
+  { field: "roleName", label: "角色名称" },
+  { field: "roleKey", label: "角色编码" },
+  { field: "status", label: "状态", component: "select", props: { options: CommonStatusOptions } },
+];
+
+/** 列定义工厂：编辑回调由页面注入 */
+export const CreateColumns = (handlers: { onEdit: (row: IRoleRow) => void }): PageColumn<IRoleRow>[] => [
+  { type: "index" },
+  { key: "roleName", title: "角色名称", icon: Shield24Regular, minWidth: 140, ellipsis: { tooltip: true } },
+  { key: "roleKey", title: "角色编码", icon: Shield24Regular, minWidth: 140, ellipsis: { tooltip: true } },
+  { key: "roleSort", title: "显示顺序", icon: TextNumberFormat24Regular, minWidth: 110 },
+  {
+    key: "dataScope",
+    title: "数据权限",
+    icon: Shield24Regular,
+    minWidth: 160,
+    render: (row) => DataScopeMap[row.dataScope] ?? "未知",
+  },
+  {
+    key: "status",
+    title: "状态",
+    icon: Status24Regular,
+    minWidth: 100,
+    render: (row) =>
+      row.status === "enabled"
+        ? h(NTag, { type: "success", size: "small" }, { default: () => "启用" })
+        : h(NTag, { type: "error", size: "small" }, { default: () => "禁用" }),
+  },
+  { key: "createdAt", title: "创建时间", icon: CalendarLtr24Regular, minWidth: 180 },
+  {
+    type: "actions",
+    icon: Options24Regular,
+    minWidth: 170,
+    actions: [
+      {
+        label: "编辑",
+        icon: Edit24Regular,
+        auth: "system:role:update",
+        onClick: handlers.onEdit,
       },
-    },
-    {
-      title: RenderColumnTitle(CalendarLtr24Regular, "创建时间"),
-      key: "createdAt",
-      minWidth: 180,
-      align: "center",
-      titleAlign: "center",
-    },
-    {
-      title: RenderColumnTitle(Options24Regular, "操作"),
-      key: "actions",
-      width: 170,
-      align: "center",
-      titleAlign: "center",
-      fixed: "right",
-      render: (row) =>
-        h(
-          NSpace,
-          { size: 8, justify: "center", inline: true },
-          {
-            default: () =>
-              [
-                userStore.hasPermission("system:role:update")
-                  ? renderActionButton("编辑", Edit24Regular, "primary", () => handlers.onEdit(row))
-                  : null,
-                userStore.hasPermission("system:role:delete")
-                  ? renderActionButton("删除", Delete24Regular, "error", () => handlers.onDelete(row))
-                  : null,
-              ].filter(Boolean),
-          },
-        ),
-    },
-  ];
-};
+      {
+        label: "删除",
+        icon: Delete24Regular,
+        buttonType: "error",
+        auth: "system:role:delete",
+        confirm: (row) => `确定要删除角色「${row.roleName}」吗？`,
+      },
+    ],
+  },
+];

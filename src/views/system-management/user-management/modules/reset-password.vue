@@ -1,22 +1,11 @@
 ﻿<!--
-  用户管理 -> 重置密码（弹窗）
+  用户管理 -> 重置密码（useModal 内容方）
 
-  接收当前用户 user，提交前对新密码做 RSA 加密后调用 ResetUserPassword 接口。
+  当前操作的用户由列表页 setData 传入，提交前对新密码做 RSA 加密后调用 ResetUserPassword 接口。
 -->
 
 <template>
-  <!-- #region 弹窗与表单 -->
-  <NModal
-    v-model:show="visible"
-    preset="dialog"
-    style="width: 420px"
-    title="重置密码"
-    :mask-closable="false"
-    :show-icon="false"
-    content-class=" my-4!"
-    title-class="naive-modal-title"
-    @after-leave="handleAfterLeave"
-  >
+  <Modal>
     <!-- 提示当前操作对象 -->
     <p v-if="user" class="m-0 mb-4 text-sm text-black/65 dark:text-white/65">
       正在为用户「{{ user.username || user.account }}」重置登录密码
@@ -43,44 +32,18 @@
         />
       </NFormItem>
     </NForm>
-
-    <template #action>
-      <div class="flex justify-end gap-2">
-        <NButton @click="handleCancel">
-          <template #icon>
-            <NIcon>
-              <Dismiss24Regular />
-            </NIcon>
-          </template>
-          取消
-        </NButton>
-        <NButton type="primary" :loading="submitting" @click="handleSubmit">
-          <template #icon>
-            <NIcon>
-              <Checkmark24Regular />
-            </NIcon>
-          </template>
-          确定
-        </NButton>
-      </div>
-    </template>
-  </NModal>
-  <!-- #endregion -->
+  </Modal>
 </template>
 
 <script setup lang="ts">
-// #region 依赖引入
 import { GetPublicEncryptKey } from "@/api/auth";
 import { ResetUserPassword } from "@/api/system-management";
+import { useModal } from "@/hooks";
 import { Encrypt } from "@/utils";
-import Checkmark24Regular from "@vicons/fluent/es/Checkmark24Regular";
-import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
-import { NButton, NForm, NFormItem, NIcon, NInput, NModal, useMessage, type FormInst, type FormRules } from "naive-ui";
-import { ref, watch } from "vue";
+import { NForm, NFormItem, NInput, useMessage, type FormInst, type FormRules } from "naive-ui";
+import { computed, ref } from "vue";
 import type { IUserRow } from "../data";
-// #endregion
 
-// #region 表单数据模型
 interface ResetPasswordForm {
   password: string;
   confirmPassword: string;
@@ -90,28 +53,29 @@ const createDefaultForm = (): ResetPasswordForm => ({
   password: "",
   confirmPassword: "",
 });
-// #endregion
 
-// #region 组件通信（Props / Emits / v-model）
-const props = defineProps<{
-  user?: IUserRow | null;
-}>();
-
-const emit = defineEmits<{
-  success: [];
-}>();
-
-const visible = defineModel<boolean>("show", { required: true });
-// #endregion
-
-// #region 响应式状态
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
-const submitting = ref(false);
 const formModel = ref<ResetPasswordForm>(createDefaultForm());
-// #endregion
 
-// #region 表单校验规则
+const [Modal, modalApi] = useModal<IUserRow>({
+  title: "重置密码",
+  width: "420px",
+  onConfirm: handleSubmit,
+  // 每次打开时重置为空表单
+  onOpened: () => {
+    formModel.value = createDefaultForm();
+  },
+  // 关闭后清空表单与校验，避免下次打开看到旧密码
+  onClosed: () => {
+    formRef.value?.restoreValidation();
+    formModel.value = createDefaultForm();
+  },
+});
+
+/** 当前操作的用户（列表页 setData 传入） */
+const user = computed(() => modalApi.getData() ?? null);
+
 const rules: FormRules = {
   password: [
     { required: true, message: "请输入新密码", trigger: ["input", "blur"] },
@@ -130,23 +94,11 @@ const rules: FormRules = {
     },
   ],
 };
-// #endregion
 
-// #region 弹窗交互
-const handleCancel = () => {
-  visible.value = false;
-};
-
-/** 关闭后清空表单与校验，避免下次打开看到旧密码 */
-const handleAfterLeave = () => {
-  formRef.value?.restoreValidation();
-  formModel.value = createDefaultForm();
-};
-// #endregion
-
-// #region 提交重置密码
-const handleSubmit = async () => {
-  if (!props.user) return;
+/** 点击"确定"：校验 -> 取公钥加密 -> 提交 -> 关闭 */
+async function handleSubmit() {
+  const currentUser = modalApi.getData();
+  if (!currentUser) return;
 
   try {
     await formRef.value?.validate();
@@ -155,9 +107,9 @@ const handleSubmit = async () => {
   }
 
   try {
-    submitting.value = true;
+    modalApi.lock();
 
-    // 与登录/新增用户相同：先取公钥再加密密码
+    // 与登录 / 新增用户相同：先取公钥再加密密码
     const publicKey = await GetPublicEncryptKey();
     const encryptedPassword = Encrypt(formModel.value.password, publicKey);
     if (!encryptedPassword) {
@@ -165,28 +117,15 @@ const handleSubmit = async () => {
       return;
     }
 
-    await ResetUserPassword(props.user.id, { password: encryptedPassword });
+    await ResetUserPassword(currentUser.id, { password: encryptedPassword });
     message.success("密码重置成功");
-    visible.value = false;
-    emit("success");
+    modalApi.close();
   } catch {
     // 错误提示由响应拦截器统一处理
   } finally {
-    submitting.value = false;
+    modalApi.unlock();
   }
-};
-// #endregion
-
-// #region 监听弹窗打开
-// 每次打开时重置为空表单
-watch(
-  () => visible.value,
-  (show) => {
-    if (!show) return;
-    formModel.value = createDefaultForm();
-  },
-);
-// #endregion
+}
 </script>
 
 <style scoped></style>

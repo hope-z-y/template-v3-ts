@@ -62,7 +62,7 @@
     <template #menu>
       <Menu />
     </template>
-    <div class="size-full min-h-0">
+    <div ref="routeViewRef" class="size-full min-h-0">
       <RouterView v-slot="{ Component, route: viewRoute }">
         <KeepAlive>
           <component :is="Component" v-if="viewRoute.meta.keepAlive" :key="viewKey" />
@@ -87,7 +87,7 @@ import WeatherSunny24Regular from "@vicons/fluent/es/WeatherSunny24Regular";
 import { useFullscreen } from "@vueuse/core";
 import { NAvatar, NIcon, NPopover, NTooltip } from "naive-ui";
 import { storeToRefs } from "pinia";
-import { computed, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import Breadcrumbs from "./modules/breadcrumb.vue";
 import Menu from "./modules/menu.vue";
@@ -105,6 +105,36 @@ interface MenuSearchItem {
 const route = useRoute();
 const menuTagStore = useMenuTagStore();
 const viewKey = computed(() => menuTagStore.getViewKey(route.path));
+const routeViewRef = ref<HTMLElement | null>(null);
+let routeViewAnimation: Animation | null = null;
+
+/** 仅让主内容区轻柔入场，保留 KeepAlive 实例，不影响侧栏和顶部导航。 */
+watch(
+  () => route.path,
+  async (path, previousPath) => {
+    if (!previousPath || path === previousPath) return;
+
+    await nextTick();
+
+    const element = routeViewRef.value;
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!element?.animate || reduceMotion) return;
+
+    routeViewAnimation?.cancel();
+    routeViewAnimation = element.animate(
+      [
+        { opacity: 0.55, transform: "translateY(8px) scale(0.995)", filter: "blur(2px)" },
+        { opacity: 1, transform: "translateY(0) scale(1)", filter: "blur(0)" },
+      ],
+      {
+        duration: 240,
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      },
+    );
+  },
+);
+
+onBeforeUnmount(() => routeViewAnimation?.cancel());
 const menuStore = useMenuStore();
 const { menus } = storeToRefs(menuStore);
 

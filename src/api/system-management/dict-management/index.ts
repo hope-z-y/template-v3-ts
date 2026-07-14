@@ -4,6 +4,7 @@ import type {
   ICreateDictTypeParams,
   IDictData,
   IDictType,
+  IGetAllDictDataResponse,
   IGetDictDataByTypeResponse,
   IGetDictDataListResponse,
   IGetDictTypeListResponse,
@@ -69,6 +70,13 @@ export const DeleteDictType = (id: string) => {
  */
 export const GetDictDataList = (params: IQueryDictDataParams) => {
   return request.get<string, IGetDictDataListResponse>("/system/dict/data", { params });
+};
+
+/**
+ * Query all dictionary data, grouped by dictionary type.
+ */
+export const GetAllDictData = () => {
+  return request.get<string, IGetAllDictDataResponse>("/system/dict/data/all");
 };
 
 /**

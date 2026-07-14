@@ -1,17 +1,7 @@
-﻿<!-- 角色管理 -> 新增 / 编辑表单 -->
+﻿<!-- 角色管理 -> 新增 / 编辑表单（useModal 内容方：弹窗外壳由 useModal 提供，这里只写表单与权限树） -->
 
 <template>
-  <NModal
-    v-model:show="visible"
-    preset="dialog"
-    style="width: 40vw"
-    :title="mode === 'create' ? '新增角色' : '编辑角色'"
-    :mask-closable="false"
-    :show-icon="false"
-    content-class="my-4!"
-    title-class="naive-modal-title"
-    @after-leave="handleAfterLeave"
-  >
+  <Modal>
     <div class="flex gap-4 h-[min(560px,calc(100vh-220px))]">
       <!-- 左侧：基础信息 -->
       <NForm
@@ -40,7 +30,7 @@
         <NFormItem label="状态" path="status">
           <NRadioGroup v-model:value="formModel.status">
             <NSpace>
-              <NRadio v-for="item in statusOptions" :key="item.value" :value="item.value">
+              <NRadio v-for="item in CommonStatusOptions" :key="item.value" :value="item.value">
                 {{ item.label }}
               </NRadio>
             </NSpace>
@@ -49,7 +39,7 @@
         <NFormItem label="数据权限" path="dataScope">
           <NSelect
             v-model:value="formModel.dataScope"
-            :options="dataScopeOptions"
+            :options="DataScopeOptions"
             placeholder="请选择数据权限"
             class="w-full"
           />
@@ -123,39 +113,19 @@
         </div>
       </div>
     </div>
-
-    <template #action>
-      <div class="flex justify-end gap-2">
-        <NButton @click="handleCancel">
-          <template #icon>
-            <NIcon><Dismiss24Regular /></NIcon>
-          </template>
-          取消
-        </NButton>
-        <NButton type="primary" :loading="submitting" @click="handleSubmit">
-          <template #icon>
-            <NIcon><Checkmark24Regular /></NIcon>
-          </template>
-          确定
-        </NButton>
-      </div>
-    </template>
-  </NModal>
+  </Modal>
 </template>
 
 <script setup lang="ts">
 import { CreateRole, GetDeptTree, GetMenuTree, GetRoleById, UpdateRole } from "@/api/system-management";
 import type { CommonStatus, DataScope, ICreateRoleParams, IDept, IMenu, IUpdateRoleParams } from "@/api/types";
-import Checkmark24Regular from "@vicons/fluent/es/Checkmark24Regular";
-import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
+import { useModal } from "@/hooks";
 import {
   NButton,
   NForm,
   NFormItem,
-  NIcon,
   NInput,
   NInputNumber,
-  NModal,
   NRadio,
   NRadioGroup,
   NSelect,
@@ -167,8 +137,9 @@ import {
   type FormRules,
   type TreeOption,
 } from "naive-ui";
-import { computed, ref, watch } from "vue";
-import { dataScopeOptions, statusOptions, type IRoleRow } from "../data";
+import { CommonStatusOptions, DataScopeOptions } from "@/utils/constant";
+import { computed, ref } from "vue";
+import type { IRoleModalData } from "../data";
 
 interface RoleFormModel {
   roleKey: string;
@@ -192,20 +163,12 @@ const createDefaultForm = (): RoleFormModel => ({
   deptIds: [],
 });
 
-const props = defineProps<{
-  mode: "create" | "edit";
-  record?: IRoleRow | null;
-}>();
-
 const emit = defineEmits<{
   success: [];
 }>();
 
-const visible = defineModel<boolean>("show", { required: true });
-
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
-const submitting = ref(false);
 const deptLoading = ref(false);
 const menuLoading = ref(false);
 const deptTree = ref<IDept[]>([]);
@@ -213,6 +176,20 @@ const menuTree = ref<IMenu[]>([]);
 const formModel = ref<RoleFormModel>(createDefaultForm());
 const menuExpandedKeys = ref<Array<string | number>>([]);
 const deptExpandedKeys = ref<Array<string | number>>([]);
+
+const [Modal, modalApi] = useModal<IRoleModalData>({
+  title: (data) => (data?.mode === "edit" ? "编辑角色" : "新增角色"),
+  onConfirm: handleSubmit,
+  onOpened: handleOpened,
+  onClosed: () => {
+    formRef.value?.restoreValidation();
+    formModel.value = createDefaultForm();
+    menuExpandedKeys.value = [];
+    deptExpandedKeys.value = [];
+  },
+});
+
+const mode = computed(() => modalApi.getData()?.mode ?? "create");
 
 const showDeptScope = computed(() => formModel.value.dataScope === "custom");
 
@@ -290,11 +267,36 @@ const loadMenuTree = async () => {
   }
 };
 
-const loadRoleDetail = async () => {
-  if (props.mode !== "edit" || !props.record) return;
+/** 编辑模式回填：优先详情接口，失败降级用列表行数据 */
+const fillFormFromRecord = (data: IRoleModalData) => {
+  if (data.mode === "edit" && data.record) {
+    formModel.value = {
+      roleKey: data.record.roleKey,
+      roleName: data.record.roleName,
+      roleSort: data.record.roleSort ?? 0,
+      dataScope: data.record.dataScope,
+      status: data.record.status,
+      remark: data.record.remark ?? "",
+      menuIds: data.record.menuIds,
+      deptIds: data.record.deptIds,
+    };
+    return;
+  }
+
+  formModel.value = createDefaultForm();
+};
+
+/** 弹窗打开：先并行加载两棵权限树，再按模式回填表单 */
+async function handleOpened(data: IRoleModalData) {
+  await Promise.all([loadDeptTree(), loadMenuTree()]);
+
+  if (data?.mode !== "edit" || !data.record) {
+    formModel.value = createDefaultForm();
+    return;
+  }
 
   try {
-    const role = await GetRoleById(props.record.id);
+    const role = await GetRoleById(data.record.id);
     formModel.value = {
       roleKey: role.roleKey,
       roleName: role.roleName,
@@ -306,51 +308,12 @@ const loadRoleDetail = async () => {
       deptIds: role.deptIds,
     };
   } catch {
-    resetFormFromRecord();
+    fillFormFromRecord(data);
   }
-};
+}
 
-const resetFormFromRecord = () => {
-  if (props.mode === "edit" && props.record) {
-    formModel.value = {
-      roleKey: props.record.roleKey,
-      roleName: props.record.roleName,
-      roleSort: props.record.roleSort ?? 0,
-      dataScope: props.record.dataScope,
-      status: props.record.status,
-      remark: props.record.remark ?? "",
-      menuIds: props.record.menuIds,
-      deptIds: props.record.deptIds,
-    };
-    return;
-  }
-
-  formModel.value = createDefaultForm();
-};
-
-const buildPayload = (): ICreateRoleParams | IUpdateRoleParams => ({
-  roleKey: formModel.value.roleKey.trim(),
-  roleName: formModel.value.roleName.trim(),
-  roleSort: formModel.value.roleSort,
-  dataScope: formModel.value.dataScope,
-  status: formModel.value.status,
-  remark: formModel.value.remark.trim() || undefined,
-  menuIds: formModel.value.menuIds,
-  deptIds: formModel.value.dataScope === "custom" ? formModel.value.deptIds : [],
-});
-
-const handleCancel = () => {
-  visible.value = false;
-};
-
-const handleAfterLeave = () => {
-  formRef.value?.restoreValidation();
-  formModel.value = createDefaultForm();
-  menuExpandedKeys.value = [];
-  deptExpandedKeys.value = [];
-};
-
-const handleSubmit = async () => {
+/** 点击"确定"：校验 -> 业务校验 -> 提交 -> 关闭并通知列表刷新 */
+async function handleSubmit() {
   try {
     await formRef.value?.validate();
   } catch {
@@ -362,42 +325,39 @@ const handleSubmit = async () => {
     return;
   }
 
-  const payload = buildPayload();
+  const payload: ICreateRoleParams | IUpdateRoleParams = {
+    roleKey: formModel.value.roleKey.trim(),
+    roleName: formModel.value.roleName.trim(),
+    roleSort: formModel.value.roleSort,
+    dataScope: formModel.value.dataScope,
+    status: formModel.value.status,
+    remark: formModel.value.remark.trim() || undefined,
+    menuIds: formModel.value.menuIds,
+    // 非自定义范围时不提交部门勾选，避免残留脏数据
+    deptIds: formModel.value.dataScope === "custom" ? formModel.value.deptIds : [],
+  };
+
+  const data = modalApi.getData();
 
   try {
-    submitting.value = true;
+    modalApi.lock();
 
-    if (props.mode === "edit" && props.record) {
-      await UpdateRole(props.record.id, payload);
+    if (data?.mode === "edit" && data.record) {
+      await UpdateRole(data.record.id, payload);
       message.success("修改成功");
     } else {
       await CreateRole(payload as ICreateRoleParams);
       message.success("新增成功");
     }
 
-    visible.value = false;
+    modalApi.close();
     emit("success");
   } catch {
     // 错误提示由响应拦截器统一处理
   } finally {
-    submitting.value = false;
+    modalApi.unlock();
   }
-};
-
-watch(
-  () => visible.value,
-  async (show) => {
-    if (!show) return;
-
-    await Promise.all([loadDeptTree(), loadMenuTree()]);
-
-    if (props.mode === "edit") {
-      await loadRoleDetail();
-    } else {
-      resetFormFromRecord();
-    }
-  },
-);
+}
 </script>
 
 <style scoped></style>

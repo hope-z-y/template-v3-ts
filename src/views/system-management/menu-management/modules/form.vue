@@ -1,17 +1,7 @@
-﻿<!-- 菜单管理 -> 新增 / 编辑表单 -->
+﻿<!-- 菜单管理 -> 新增 / 编辑表单（useModal 内容方） -->
 
 <template>
-  <NModal
-    v-model:show="visible"
-    preset="dialog"
-    style="width: 40vw"
-    :title="mode === 'create' ? '新增菜单' : '编辑菜单'"
-    :mask-closable="false"
-    :show-icon="false"
-    content-class="my-4!"
-    title-class="naive-modal-title"
-    @after-leave="handleAfterLeave"
-  >
+  <Modal>
     <NForm ref="formRef" :model="formModel" :rules="rules" label-placement="left" label-width="100">
       <div class="grid grid-cols-2 gap-x-4">
         <NFormItem label="上级菜单" path="parentId">
@@ -29,7 +19,7 @@
         </NFormItem>
         <NFormItem label="菜单类型" path="menuType">
           <NRadioGroup v-model:value="formModel.menuType">
-            <NRadioButton v-for="item in menuTypeOptions" :key="item.value" :value="item.value">
+            <NRadioButton v-for="item in MenuTypeOptions" :key="item.value" :value="item.value">
               {{ item.label }}
             </NRadioButton>
           </NRadioGroup>
@@ -48,7 +38,7 @@
         <NFormItem label="状态" path="status">
           <NRadioGroup v-model:value="formModel.status">
             <NSpace>
-              <NRadio v-for="item in statusOptions" :key="item.value" :value="item.value">
+              <NRadio v-for="item in CommonStatusOptions" :key="item.value" :value="item.value">
                 {{ item.label }}
               </NRadio>
             </NSpace>
@@ -69,7 +59,7 @@
           <NFormItem label="显示状态" path="visible">
             <NRadioGroup v-model:value="formModel.visible">
               <NSpace>
-                <NRadio v-for="item in visibleOptions" :key="String(item.value)" :value="item.value">
+                <NRadio v-for="item in VisibleOptions" :key="String(item.value)" :value="item.value">
                   {{ item.label }}
                 </NRadio>
               </NSpace>
@@ -91,7 +81,7 @@
           <NFormItem label="是否缓存" path="cacheable">
             <NRadioGroup v-model:value="formModel.cacheable">
               <NSpace>
-                <NRadio v-for="item in isCacheOptions" :key="String(item.value)" :value="item.value">
+                <NRadio v-for="item in IsCacheOptions" :key="String(item.value)" :value="item.value">
                   {{ item.label }}
                 </NRadio>
               </NSpace>
@@ -108,40 +98,19 @@
         </NFormItem>
       </div>
     </NForm>
-
-    <template #action>
-      <div class="flex justify-end gap-2">
-        <NButton @click="handleCancel">
-          <template #icon>
-            <NIcon><Dismiss24Regular /></NIcon>
-          </template>
-          取消
-        </NButton>
-        <NButton type="primary" :loading="submitting" @click="handleSubmit">
-          <template #icon>
-            <NIcon><Checkmark24Regular /></NIcon>
-          </template>
-          确定
-        </NButton>
-      </div>
-    </template>
-  </NModal>
+  </Modal>
 </template>
 
 <script setup lang="ts">
 import { CreateMenu, GetMenuById, GetMenuTree, UpdateMenu } from "@/api/system-management";
 import type { CommonStatus, ICreateMenuParams, IMenu, IUpdateMenuParams, MenuType } from "@/api/types";
 import { IconPicker } from "@/components";
-import Checkmark24Regular from "@vicons/fluent/es/Checkmark24Regular";
-import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
+import { useModal } from "@/hooks";
 import {
-  NButton,
   NForm,
   NFormItem,
-  NIcon,
   NInput,
   NInputNumber,
-  NModal,
   NRadio,
   NRadioButton,
   NRadioGroup,
@@ -152,8 +121,9 @@ import {
   type FormRules,
   type TreeSelectOption,
 } from "naive-ui";
-import { computed, ref, watch } from "vue";
-import { isCacheOptions, menuTypeOptions, statusOptions, visibleOptions } from "../data";
+import { CommonStatusOptions, IsCacheOptions, MenuTypeOptions, VisibleOptions } from "@/utils/constant";
+import { computed, ref } from "vue";
+import type { IMenuModalData } from "../data";
 
 interface MenuFormModel {
   parentId: string | null;
@@ -185,29 +155,32 @@ const createDefaultForm = (): MenuFormModel => ({
   cacheable: false,
 });
 
-const props = defineProps<{
-  mode: "create" | "edit";
-  record?: IMenu | null;
-}>();
-
 const emit = defineEmits<{
   success: [];
 }>();
 
-const visible = defineModel<boolean>("show", { required: true });
-
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
-const submitting = ref(false);
 const menuLoading = ref(false);
 const menuTree = ref<IMenu[]>([]);
 const formModel = ref<MenuFormModel>(createDefaultForm());
+
+const [Modal, modalApi] = useModal<IMenuModalData>({
+  title: (data) => (data?.mode === "edit" ? "编辑菜单" : "新增菜单"),
+  onConfirm: handleSubmit,
+  onOpened: handleOpened,
+  onClosed: () => {
+    formRef.value?.restoreValidation();
+    formModel.value = createDefaultForm();
+  },
+});
 
 const rules = computed<FormRules>(() => ({
   menuName: [{ required: true, message: "请输入菜单名称", trigger: ["input", "blur"] }],
   menuType: [{ required: true, message: "请选择菜单类型", trigger: ["change"] }],
 }));
 
+/** 上级菜单树选项：顶部固定"根目录"，编辑时排除自己 */
 const toTreeOptions = (menus: IMenu[], excludeId?: string): TreeSelectOption[] => {
   const root: TreeSelectOption = { key: "root", label: "根目录" };
 
@@ -223,9 +196,10 @@ const toTreeOptions = (menus: IMenu[], excludeId?: string): TreeSelectOption[] =
   return [root, ...mapNodes(menus)];
 };
 
-const menuTreeOptions = computed<TreeSelectOption[]>(() =>
-  toTreeOptions(menuTree.value, props.mode === "edit" ? props.record?.id : undefined),
-);
+const menuTreeOptions = computed<TreeSelectOption[]>(() => {
+  const data = modalApi.getData();
+  return toTreeOptions(menuTree.value, data?.mode === "edit" ? data.record?.id : undefined);
+});
 
 const loadMenuTree = async () => {
   try {
@@ -238,11 +212,40 @@ const loadMenuTree = async () => {
   }
 };
 
-const loadMenuDetail = async () => {
-  if (props.mode !== "edit" || !props.record) return;
+/** 编辑模式回填（详情接口失败时的降级） */
+const fillFormFromRecord = (data: IMenuModalData) => {
+  if (data.mode === "edit" && data.record) {
+    formModel.value = {
+      parentId: data.record.parentId,
+      menuType: data.record.menuType,
+      menuName: data.record.menuName,
+      permissionCode: data.record.permissionCode ?? "",
+      routePath: data.record.routePath ?? "",
+      component: data.record.component ?? "",
+      externalLink: data.record.externalLink ?? "",
+      icon: data.record.icon ?? "",
+      sort: data.record.sort ?? 0,
+      visible: data.record.visible,
+      status: data.record.status,
+      cacheable: data.record.cacheable,
+    };
+    return;
+  }
+
+  formModel.value = createDefaultForm();
+};
+
+/** 弹窗打开：加载菜单树，编辑模式再拉详情回填 */
+async function handleOpened(data: IMenuModalData) {
+  await loadMenuTree();
+
+  if (data?.mode !== "edit" || !data.record) {
+    formModel.value = createDefaultForm();
+    return;
+  }
 
   try {
-    const menu = await GetMenuById(props.record.id);
+    const menu = await GetMenuById(data.record.id);
     formModel.value = {
       parentId: menu.parentId,
       menuType: menu.menuType,
@@ -258,32 +261,11 @@ const loadMenuDetail = async () => {
       cacheable: menu.cacheable,
     };
   } catch {
-    resetFormFromRecord();
+    fillFormFromRecord(data);
   }
-};
+}
 
-const resetFormFromRecord = () => {
-  if (props.mode === "edit" && props.record) {
-    formModel.value = {
-      parentId: props.record.parentId,
-      menuType: props.record.menuType,
-      menuName: props.record.menuName,
-      permissionCode: props.record.permissionCode ?? "",
-      routePath: props.record.routePath ?? "",
-      component: props.record.component ?? "",
-      externalLink: props.record.externalLink ?? "",
-      icon: props.record.icon ?? "",
-      sort: props.record.sort ?? 0,
-      visible: props.record.visible,
-      status: props.record.status,
-      cacheable: props.record.cacheable,
-    };
-    return;
-  }
-
-  formModel.value = createDefaultForm();
-};
-
+/** 按菜单类型裁剪提交字段：目录不带组件配置、按钮只带权限标识 */
 const buildPayload = (): ICreateMenuParams | IUpdateMenuParams => {
   const base: ICreateMenuParams = {
     parentId: formModel.value.parentId === "root" ? null : formModel.value.parentId,
@@ -312,16 +294,8 @@ const buildPayload = (): ICreateMenuParams | IUpdateMenuParams => {
   return base;
 };
 
-const handleCancel = () => {
-  visible.value = false;
-};
-
-const handleAfterLeave = () => {
-  formRef.value?.restoreValidation();
-  formModel.value = createDefaultForm();
-};
-
-const handleSubmit = async () => {
+/** 点击"确定"：校验 -> 提交 -> 关闭并通知列表刷新 */
+async function handleSubmit() {
   try {
     await formRef.value?.validate();
   } catch {
@@ -329,41 +303,27 @@ const handleSubmit = async () => {
   }
 
   const payload = buildPayload();
+  const data = modalApi.getData();
 
   try {
-    submitting.value = true;
+    modalApi.lock();
 
-    if (props.mode === "edit" && props.record) {
-      await UpdateMenu(props.record.id, payload);
+    if (data?.mode === "edit" && data.record) {
+      await UpdateMenu(data.record.id, payload);
       message.success("修改成功");
     } else {
       await CreateMenu(payload as ICreateMenuParams);
       message.success("新增成功");
     }
 
-    visible.value = false;
+    modalApi.close();
     emit("success");
   } catch {
     // 错误提示由响应拦截器统一处理
   } finally {
-    submitting.value = false;
+    modalApi.unlock();
   }
-};
-
-watch(
-  () => visible.value,
-  async (show) => {
-    if (!show) return;
-
-    await loadMenuTree();
-
-    if (props.mode === "edit") {
-      await loadMenuDetail();
-    } else {
-      resetFormFromRecord();
-    }
-  },
-);
+}
 </script>
 
 <style scoped></style>

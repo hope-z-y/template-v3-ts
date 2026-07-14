@@ -1,14 +1,7 @@
-﻿<!-- 部门管理 -> 新增 / 编辑表单 -->
+﻿<!-- 部门管理 -> 新增 / 编辑表单（useModal 内容方） -->
 
 <template>
-  <NModal
-    v-model:show="visible"
-    preset="card"
-    style="width: 40vw"
-    :title="mode === 'create' ? '新增部门' : '编辑部门'"
-    :mask-closable="false"
-    @after-leave="handleAfterLeave"
-  >
+  <Modal>
     <NForm ref="formRef" :model="formModel" :rules="rules" label-placement="left" label-width="80">
       <NFormItem label="上级部门" path="parentId">
         <NTreeSelect
@@ -52,50 +45,25 @@
       <NFormItem label="状态" path="status">
         <NRadioGroup v-model:value="formModel.status">
           <NSpace>
-            <NRadio v-for="item in statusOptions" :key="item.value" :value="item.value">
+            <NRadio v-for="item in CommonStatusOptions" :key="item.value" :value="item.value">
               {{ item.label }}
             </NRadio>
           </NSpace>
         </NRadioGroup>
       </NFormItem>
     </NForm>
-
-    <template #footer>
-      <div class="flex justify-end gap-2">
-        <NButton @click="handleCancel">
-          <template #icon>
-            <NIcon>
-              <Dismiss24Regular />
-            </NIcon>
-          </template>
-          取消
-        </NButton>
-        <NButton type="primary" :loading="submitting" @click="handleSubmit">
-          <template #icon>
-            <NIcon>
-              <Checkmark24Regular />
-            </NIcon>
-          </template>
-          确定
-        </NButton>
-      </div>
-    </template>
-  </NModal>
+  </Modal>
 </template>
 
 <script setup lang="ts">
 import { CreateDept, GetAllUsers, GetDeptTree, UpdateDept } from "@/api/system-management";
 import type { ICreateDeptParams, IDept, IUserOption } from "@/api/types";
-import Checkmark24Regular from "@vicons/fluent/es/Checkmark24Regular";
-import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
+import { useModal } from "@/hooks";
 import {
-  NButton,
   NForm,
   NFormItem,
-  NIcon,
   NInput,
   NInputNumber,
-  NModal,
   NRadio,
   NRadioGroup,
   NSelect,
@@ -107,18 +75,15 @@ import {
   type SelectOption,
   type TreeSelectOption,
 } from "naive-ui";
-import { computed, ref, watch } from "vue";
+import { CommonStatusOptions } from "@/utils/constant";
+import { computed, ref } from "vue";
+import type { IDeptModalData } from "../data";
 
 interface LeaderOption extends SelectOption {
   value: string;
   label: string;
   leaderName: string;
 }
-
-const statusOptions = [
-  { label: "启用", value: "enabled" },
-  { label: "禁用", value: "disabled" },
-] as const;
 
 const createDefaultForm = (): ICreateDeptParams => ({
   parentId: null,
@@ -131,26 +96,32 @@ const createDefaultForm = (): ICreateDeptParams => ({
   status: "enabled",
 });
 
-const props = defineProps<{
-  mode: "create" | "edit";
-  record?: IDept | null;
-}>();
-
 const emit = defineEmits<{
   success: [];
 }>();
 
-const visible = defineModel<boolean>("show", { required: true });
-
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
-const submitting = ref(false);
 const treeLoading = ref(false);
 const userLoading = ref(false);
 const deptTree = ref<IDept[]>([]);
 const userList = ref<IUserOption[]>([]);
 const selectedLeaderId = ref<string | null>(null);
 const formModel = ref<ICreateDeptParams>(createDefaultForm());
+
+const [Modal, modalApi] = useModal<IDeptModalData>({
+  title: (data) => (data?.mode === "edit" ? "编辑部门" : "新增部门"),
+  // 原表单用的是 card 预设，保持外观不变
+  preset: "card",
+  onConfirm: handleSubmit,
+  onOpened: handleOpened,
+  onClosed: () => {
+    formRef.value?.restoreValidation();
+    formModel.value = createDefaultForm();
+    selectedLeaderId.value = null;
+    userList.value = [];
+  },
+});
 
 const getUserDisplayName = (user: IUserOption) => user.username?.trim() || user.account;
 
@@ -173,6 +144,7 @@ const rules: FormRules = {
   email: [{ type: "email", message: "邮箱格式不正确", trigger: ["input", "blur"] }],
 };
 
+/** 上级部门树选项：编辑时排除自己（不能把自己挂到自己下面） */
 const toTreeOptions = (nodes: IDept[], excludeId?: string): TreeSelectOption[] => {
   return nodes
     .filter((node) => node.id !== excludeId)
@@ -184,7 +156,8 @@ const toTreeOptions = (nodes: IDept[], excludeId?: string): TreeSelectOption[] =
 };
 
 const deptTreeOptions = computed<TreeSelectOption[]>(() => {
-  const children = toTreeOptions(deptTree.value, props.mode === "edit" ? props.record?.id : undefined);
+  const data = modalApi.getData();
+  const children = toTreeOptions(deptTree.value, data?.mode === "edit" ? data.record?.id : undefined);
 
   return [
     {
@@ -229,38 +202,31 @@ const handleLeaderChange = (userId: string | null) => {
   formModel.value.leaderUserId = user.value;
 };
 
-const resetForm = () => {
-  if (props.mode === "edit" && props.record) {
+/** 弹窗打开：并行加载部门树与用户列表，再按模式回填表单 */
+async function handleOpened(data: IDeptModalData) {
+  await Promise.all([loadDeptTree(), loadUsers()]);
+
+  if (data?.mode === "edit" && data.record) {
     formModel.value = {
-      parentId: props.record.parentId,
-      deptName: props.record.deptName,
-      deptCode: props.record.deptCode,
-      sort: props.record.sort,
-      leaderUserId: props.record.leaderUserId ?? undefined,
-      phone: props.record.phone ?? "",
-      email: props.record.email ?? "",
-      status: props.record.status,
+      parentId: data.record.parentId,
+      deptName: data.record.deptName,
+      deptCode: data.record.deptCode,
+      sort: data.record.sort,
+      leaderUserId: data.record.leaderUserId ?? undefined,
+      phone: data.record.phone ?? "",
+      email: data.record.email ?? "",
+      status: data.record.status,
     };
-    selectedLeaderId.value = props.record.leaderUserId;
+    selectedLeaderId.value = data.record.leaderUserId;
     return;
   }
 
   formModel.value = createDefaultForm();
   selectedLeaderId.value = null;
-};
+}
 
-const handleCancel = () => {
-  visible.value = false;
-};
-
-const handleAfterLeave = () => {
-  formRef.value?.restoreValidation();
-  formModel.value = createDefaultForm();
-  selectedLeaderId.value = null;
-  userList.value = [];
-};
-
-const handleSubmit = async () => {
+/** 点击"确定"：校验 -> 提交 -> 关闭并通知列表刷新 */
+async function handleSubmit() {
   try {
     await formRef.value?.validate();
   } catch {
@@ -282,35 +248,27 @@ const handleSubmit = async () => {
   if (phone) payload.phone = phone;
   if (email) payload.email = email;
 
-  try {
-    submitting.value = true;
+  const data = modalApi.getData();
 
-    if (props.mode === "edit" && props.record) {
-      await UpdateDept(props.record.id, payload);
+  try {
+    modalApi.lock();
+
+    if (data?.mode === "edit" && data.record) {
+      await UpdateDept(data.record.id, payload);
       message.success("修改成功");
     } else {
       await CreateDept(payload);
       message.success("新增成功");
     }
 
-    visible.value = false;
+    modalApi.close();
     emit("success");
   } catch {
     // 错误提示由响应拦截器处理
   } finally {
-    submitting.value = false;
+    modalApi.unlock();
   }
-};
-
-watch(
-  () => visible.value,
-  async (show) => {
-    if (!show) return;
-
-    await Promise.all([loadDeptTree(), loadUsers()]);
-    resetForm();
-  },
-);
+}
 </script>
 
 <style scoped></style>

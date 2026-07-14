@@ -1,194 +1,67 @@
-﻿<!-- 系统管理 -> 菜单管理 -->
+﻿<!-- 系统管理 -> 菜单管理（树形表：一次性加载全树 + 客户端过滤，无分页） -->
 
 <template>
-  <Page v-model:column-options="columnOptions" title="菜单管理" @refresh="fetchTree">
-    <template #search>
-      <SearchForm :model="query" :columns="3" @search="handleSearch" @reset="handleReset">
-        <NFormItem label="菜单名称" path="menuName">
-          <NInput v-model:value="query.menuName" placeholder="请输入菜单名称" clearable />
-        </NFormItem>
-        <NFormItem label="状态" path="status">
-          <NSelect
-            v-model:value="query.status"
-            :options="statusOptions"
-            placeholder="请选择状态"
-            clearable
-            class="w-full min-w-[160px]"
-          />
-        </NFormItem>
-      </SearchForm>
-    </template>
+  <MenuPage />
 
-    <template #toolbar>
-      <Permission value="system:menu:create">
-        <NButton type="primary" @click="handleCreate">
-          <template #icon>
-            <NIcon :component="Add24Regular" />
-          </template>
-          新增菜单
-        </NButton>
-      </Permission>
-    </template>
-
-    <template #default="maxHeight">
-      <NDataTable
-        :columns="columns"
-        :data="tableData"
-        :loading="loading"
-        :scroll-x="1200"
-        :row-key="(row) => row.id"
-        children-key="children"
-        default-expand-all
-        :max-height="maxHeight - 50"
-        bordered
-        striped
-      />
-    </template>
-  </Page>
-
-  <MenuForm v-model:show="formVisible" :mode="formMode" :record="editingRecord" @success="fetchTree" />
+  <MenuFormModal @success="pageApi.refresh" />
 </template>
 
 <script setup lang="ts">
 import { DeleteMenu, GetMenuTree } from "@/api/system-management";
 import type { IMenu } from "@/api/types";
-import { Page, Permission, SearchForm, type PageColumnOption } from "@/components";
+import { useModal, usePage } from "@/hooks";
 import { useUserStore } from "@/stores";
 import Add24Regular from "@vicons/fluent/es/Add24Regular";
-import {
-  NButton,
-  NDataTable,
-  NFormItem,
-  NIcon,
-  NInput,
-  NSelect,
-  useDialog,
-  useMessage,
-  type DataTableColumns,
-} from "naive-ui";
-import { computed, onMounted, reactive, ref } from "vue";
-import { createMenuColumns, statusOptions } from "./data";
+import { CreateColumns, FilterMenuTree, SearchSchema, type IMenuModalData, type IMenuQuery } from "./data";
 import MenuForm from "./modules/form.vue";
 
-interface MenuQuery {
-  menuName?: string;
-  status?: number;
-}
-
-const message = useMessage();
-const dialog = useDialog();
 const userStore = useUserStore();
-const adminMenuTree = ref<IMenu[]>([]);
-const loading = ref(false);
 
-const query = reactive<MenuQuery>({
-  menuName: undefined,
-  status: undefined,
-});
+const [MenuFormModal, formModalApi] = useModal<IMenuModalData>({ connectedComponent: MenuForm });
 
-const formVisible = ref(false);
-const formMode = ref<"create" | "edit">("create");
-const editingRecord = ref<IMenu | null>(null);
+const [MenuPage, pageApi] = usePage<IMenu, IMenuQuery>({
+  title: "菜单管理",
+  columnStorageKey: "system:menu:columns",
 
-const matchesNode = (node: IMenu, filters: MenuQuery): boolean => {
-  const menuName = filters.menuName?.trim();
-  const nameMatched = !menuName || node.menuName.includes(menuName);
-  const statusMatched =
-    filters.status === undefined || filters.status === null || Number(node.status) === filters.status;
-  return nameMatched && statusMatched;
-};
+  api: {
+    list: () => GetMenuTree(),
+    delete: (row) => DeleteMenu(row.id),
+  },
 
-const filterMenuTree = (nodes: IMenu[], filters: MenuQuery): IMenu[] => {
-  return nodes.reduce<IMenu[]>((result, node) => {
-    const children = node.children?.length ? filterMenuTree(node.children, filters) : [];
+  pagination: false,
+  heightOffset: 50,
 
-    if (matchesNode(node, filters) || children.length > 0) {
-      result.push({
-        ...node,
-        children: children.length > 0 ? children : undefined,
-      });
-    }
+  search: {
+    defaults: () => ({ menuName: undefined, status: undefined }),
+    schema: SearchSchema,
+    clientFilter: FilterMenuTree,
+  },
 
-    return result;
-  }, []);
-};
+  hooks: {
+    // 管理端菜单修改后重新获取 Profile，让侧边栏和当前用户实际可见菜单保持一致
+    afterFetch: () => userStore.loadProfile(true),
+  },
 
-const tableData = computed(() => filterMenuTree(adminMenuTree.value, query));
+  columns: CreateColumns({
+    onEdit: (row) => formModalApi.setData({ mode: "edit", record: row }).open(),
+  }),
 
-const handleCreate = () => {
-  formMode.value = "create";
-  editingRecord.value = null;
-  formVisible.value = true;
-};
-
-const handleEdit = (row: IMenu) => {
-  formMode.value = "edit";
-  editingRecord.value = row;
-  formVisible.value = true;
-};
-
-const handleDelete = (row: IMenu) => {
-  dialog.warning({
-    title: "确认删除",
-    content: `确定要删除菜单「${row.menuName}」吗？若存在子菜单将一并删除。`,
-    positiveText: "确定",
-    negativeText: "取消",
-    onPositiveClick: async () => {
-      try {
-        await DeleteMenu(row.id);
-        message.success("删除成功");
-        await fetchTree();
-      } catch {
-        // 错误提示由响应拦截器处理
-      }
+  toolbar: [
+    {
+      label: "新增菜单",
+      icon: Add24Regular,
+      auth: "system:menu:create",
+      onClick: () => formModalApi.setData({ mode: "create", record: null }).open(),
     },
-  });
-};
+  ],
 
-const fetchTree = async () => {
-  try {
-    loading.value = true;
-    const data = await GetMenuTree();
-    adminMenuTree.value = data;
-    // 管理端菜单修改后重新获取 Profile，让侧边栏和当前用户实际可见菜单保持一致。
-    await userStore.loadProfile(true);
-  } catch {
-    adminMenuTree.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleSearch = () => {
-  // 客户端过滤，无需重新请求
-};
-
-const handleReset = () => {
-  query.menuName = undefined;
-  query.status = undefined;
-};
-
-const columnOptions = ref<PageColumnOption[]>([
-  { key: "menuName", title: "菜单名称", visible: true },
-  { key: "menuType", title: "类型", visible: true },
-  { key: "sort", title: "排序", visible: true },
-  { key: "permissionCode", title: "权限标识", visible: true },
-  { key: "routePath", title: "路由地址", visible: true },
-  { key: "status", title: "状态", visible: true },
-  { key: "actions", title: "操作", visible: true, disabled: true },
-]);
-
-const columns = computed<DataTableColumns<IMenu>>(() => {
-  const visibleKeys = new Set(columnOptions.value.filter((item) => item.visible).map((item) => item.key));
-
-  return createMenuColumns({
-    onEdit: handleEdit,
-    onDelete: handleDelete,
-  }).filter((column) => "key" in column && column.key && visibleKeys.has(String(column.key)));
-});
-
-onMounted(() => {
-  fetchTree();
+  table: {
+    scrollX: 1200,
+    childrenKey: "children",
+    defaultExpandAll: true,
+    bordered: true,
+    resizable: false,
+  },
 });
 </script>
 

@@ -1,17 +1,7 @@
-﻿<!-- 岗位管理 -> 新增 / 编辑表单 -->
+﻿<!-- 岗位管理 -> 新增 / 编辑表单（useModal 内容方：只写表单本身，弹窗外壳由 useModal 提供） -->
 
 <template>
-  <NModal
-    v-model:show="visible"
-    preset="dialog"
-    style="width: 40vw"
-    :title="mode === 'create' ? '新增岗位' : '编辑岗位'"
-    :mask-closable="false"
-    :show-icon="false"
-    content-class="my-4!"
-    title-class="naive-modal-title"
-    @after-leave="handleAfterLeave"
-  >
+  <Modal>
     <NForm ref="formRef" :model="formModel" :rules="rules" label-placement="left" label-width="80">
       <NFormItem label="岗位编码" path="postCode">
         <NInput
@@ -31,7 +21,7 @@
       <NFormItem label="状态" path="status">
         <NRadioGroup v-model:value="formModel.status">
           <NSpace>
-            <NRadio v-for="item in statusOptions" :key="item.value" :value="item.value">
+            <NRadio v-for="item in CommonStatusOptions" :key="item.value" :value="item.value">
               {{ item.label }}
             </NRadio>
           </NSpace>
@@ -48,39 +38,18 @@
         />
       </NFormItem>
     </NForm>
-
-    <template #action>
-      <div class="flex justify-end gap-2">
-        <NButton @click="handleCancel">
-          <template #icon>
-            <NIcon><Dismiss24Regular /></NIcon>
-          </template>
-          取消
-        </NButton>
-        <NButton type="primary" :loading="submitting" @click="handleSubmit">
-          <template #icon>
-            <NIcon><Checkmark24Regular /></NIcon>
-          </template>
-          确定
-        </NButton>
-      </div>
-    </template>
-  </NModal>
+  </Modal>
 </template>
 
 <script setup lang="ts">
 import { CreatePost, GetPostById, UpdatePost } from "@/api/system-management";
 import type { CommonStatus, ICreatePostParams, IUpdatePostParams } from "@/api/types";
-import Checkmark24Regular from "@vicons/fluent/es/Checkmark24Regular";
-import Dismiss24Regular from "@vicons/fluent/es/Dismiss24Regular";
+import { useModal } from "@/hooks";
 import {
-  NButton,
   NForm,
   NFormItem,
-  NIcon,
   NInput,
   NInputNumber,
-  NModal,
   NRadio,
   NRadioGroup,
   NSpace,
@@ -88,8 +57,9 @@ import {
   type FormInst,
   type FormRules,
 } from "naive-ui";
-import { ref, watch } from "vue";
-import { statusOptions, type IPostRow } from "../data";
+import { CommonStatusOptions } from "@/utils/constant";
+import { computed, ref } from "vue";
+import type { IPostModalData } from "../data";
 
 interface PostFormModel {
   postCode: string;
@@ -107,32 +77,39 @@ const createDefaultForm = (): PostFormModel => ({
   remark: "",
 });
 
-const props = defineProps<{
-  mode: "create" | "edit";
-  record?: IPostRow | null;
-}>();
-
 const emit = defineEmits<{
   success: [];
 }>();
 
-const visible = defineModel<boolean>("show", { required: true });
-
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
-const submitting = ref(false);
 const formModel = ref<PostFormModel>(createDefaultForm());
 
-const rules: FormRules = {
-  postCode: [{ required: true, message: "请输入岗位编码", trigger: ["input", "blur"] }],
-  postName: [{ required: true, message: "请输入岗位名称", trigger: ["input", "blur"] }],
-};
+// 内容方 useModal：声明弹窗行为，与列表页的 formModalApi 共享同一份状态。
+// mode / record 不再走 props，统一从 modalApi.getData() 读取
+const [Modal, modalApi] = useModal<IPostModalData>({
+  // title / onOpened 的入参就是列表页 setData 传入的数据
+  title: (data) => (data?.mode === "edit" ? "编辑岗位" : "新增岗位"),
+  onConfirm: handleSubmit,
+  onOpened: handleOpened,
+  // 关闭动画结束后重置表单与校验状态，下次打开是干净的
+  onClosed: () => {
+    formRef.value?.restoreValidation();
+    formModel.value = createDefaultForm();
+  },
+});
 
-const loadPostDetail = async () => {
-  if (props.mode !== "edit" || !props.record) return;
+const mode = computed(() => modalApi.getData()?.mode ?? "create");
+
+/** 弹窗打开：编辑模式拉取详情回填，新增模式使用默认值 */
+async function handleOpened(data: IPostModalData) {
+  if (data?.mode !== "edit" || !data.record) {
+    formModel.value = createDefaultForm();
+    return;
+  }
 
   try {
-    const post = await GetPostById(props.record.id);
+    const post = await GetPostById(data.record.id);
     formModel.value = {
       postCode: post.postCode,
       postName: post.postName,
@@ -141,83 +118,60 @@ const loadPostDetail = async () => {
       remark: post.remark ?? "",
     };
   } catch {
-    resetFormFromRecord();
-  }
-};
-
-const resetFormFromRecord = () => {
-  if (props.mode === "edit" && props.record) {
+    // 详情接口失败时降级用列表行数据回填
     formModel.value = {
-      postCode: props.record.postCode,
-      postName: props.record.postName,
-      postSort: props.record.postSort ?? 0,
-      status: props.record.status,
-      remark: props.record.remark ?? "",
+      postCode: data.record.postCode,
+      postName: data.record.postName,
+      postSort: data.record.postSort ?? 0,
+      status: data.record.status,
+      remark: data.record.remark ?? "",
     };
-    return;
   }
+}
 
-  formModel.value = createDefaultForm();
-};
-
-const buildPayload = (): ICreatePostParams | IUpdatePostParams => ({
-  postCode: formModel.value.postCode.trim(),
-  postName: formModel.value.postName.trim(),
-  postSort: formModel.value.postSort,
-  status: formModel.value.status,
-  remark: formModel.value.remark.trim() || undefined,
-});
-
-const handleCancel = () => {
-  visible.value = false;
-};
-
-const handleAfterLeave = () => {
-  formRef.value?.restoreValidation();
-  formModel.value = createDefaultForm();
-};
-
-const handleSubmit = async () => {
+/** 点击"确定"：校验 -> 提交 -> 关闭并通知列表刷新 */
+async function handleSubmit() {
   try {
     await formRef.value?.validate();
   } catch {
     return;
   }
 
-  const payload = buildPayload();
+  const payload: ICreatePostParams | IUpdatePostParams = {
+    postCode: formModel.value.postCode.trim(),
+    postName: formModel.value.postName.trim(),
+    postSort: formModel.value.postSort,
+    status: formModel.value.status,
+    remark: formModel.value.remark.trim() || undefined,
+  };
+
+  const data = modalApi.getData();
 
   try {
-    submitting.value = true;
+    // lock/unlock 控制确认按钮的 loading，防止重复提交
+    modalApi.lock();
 
-    if (props.mode === "edit" && props.record) {
-      await UpdatePost(props.record.id, payload);
+    if (data?.mode === "edit" && data.record) {
+      await UpdatePost(data.record.id, payload);
       message.success("修改成功");
     } else {
       await CreatePost(payload as ICreatePostParams);
       message.success("新增成功");
     }
 
-    visible.value = false;
+    modalApi.close();
     emit("success");
   } catch {
     // 错误提示由响应拦截器统一处理
   } finally {
-    submitting.value = false;
+    modalApi.unlock();
   }
+}
+
+const rules: FormRules = {
+  postCode: [{ required: true, message: "请输入岗位编码", trigger: ["input", "blur"] }],
+  postName: [{ required: true, message: "请输入岗位名称", trigger: ["input", "blur"] }],
 };
-
-watch(
-  () => visible.value,
-  async (show) => {
-    if (!show) return;
-
-    if (props.mode === "edit") {
-      await loadPostDetail();
-    } else {
-      resetFormFromRecord();
-    }
-  },
-);
 </script>
 
 <style scoped></style>

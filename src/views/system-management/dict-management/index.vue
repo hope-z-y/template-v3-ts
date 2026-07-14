@@ -1,126 +1,14 @@
-﻿<!-- 系统管理 -> 字典管理 -->
+﻿<!-- 系统管理 -> 字典管理（主从双表：左侧字典类型，右侧联动字典数据） -->
 
 <template>
   <div class="size-full grid grid-cols-2 gap-4">
-    <Page title="字典类型" @refresh="fetchDictTypes">
-      <template #search>
-        <SearchForm :model="typeQuery" :columns="1" @search="handleTypeSearch" @reset="handleTypeReset">
-          <NFormItem label="字典名称" path="dictName">
-            <NInput v-model:value="typeQuery.dictName" placeholder="请输入字典名称" clearable />
-          </NFormItem>
-          <NFormItem label="字典类型" path="dictType">
-            <NInput v-model:value="typeQuery.dictType" placeholder="请输入字典类型" clearable />
-          </NFormItem>
-          <NFormItem label="状态" path="status">
-            <NSelect
-              v-model:value="typeQuery.status"
-              :options="statusOptions"
-              placeholder="请选择状态"
-              clearable
-              class="w-full"
-            />
-          </NFormItem>
-        </SearchForm>
-      </template>
-
-      <template #toolbar>
-        <Permission value="system:dict-type:create">
-          <NButton type="primary" size="small" @click="handleCreateType">
-            <template #icon>
-              <NIcon :component="Add24Regular" />
-            </template>
-            新增
-          </NButton>
-        </Permission>
-      </template>
-
-      <template #default="maxHeight">
-        <NDataTable
-          :columns="typeColumns"
-          :data="dictTypeList"
-          :loading="typeLoading"
-          :row-key="(row) => row.id"
-          :row-props="typeRowProps"
-          :max-height="maxHeight - 80"
-          size="small"
-          striped
-          :row-class-name="typeRowClassName"
-          scroll-x="fit-content"
-        />
-      </template>
-    </Page>
-
-    <Page title="字典数据" @refresh="fetchDictData">
-      <template #search>
-        <SearchForm :model="dataQuery" :columns="1" @search="handleDataSearch" @reset="handleDataReset">
-          <NFormItem label="字典标签" path="dictLabel">
-            <NInput
-              v-model:value="dataQuery.dictLabel"
-              placeholder="请输入字典标签"
-              clearable
-              :disabled="!selectedDictType"
-            />
-          </NFormItem>
-          <NFormItem label="字典键值" path="dictValue">
-            <NInput
-              v-model:value="dataQuery.dictValue"
-              placeholder="请输入字典键值"
-              clearable
-              :disabled="!selectedDictType"
-            />
-          </NFormItem>
-          <NFormItem label="状态" path="status">
-            <NSelect
-              v-model:value="dataQuery.status"
-              :options="statusOptions"
-              placeholder="请选择状态"
-              clearable
-              class="w-full"
-              :disabled="!selectedDictType"
-            />
-          </NFormItem>
-        </SearchForm>
-      </template>
-
-      <template #toolbar>
-        <Permission value="system:dict-data:create">
-          <NButton type="primary" size="small" :disabled="!selectedDictType" @click="handleCreateData">
-            <template #icon>
-              <NIcon :component="Add24Regular" />
-            </template>
-            新增
-          </NButton>
-        </Permission>
-      </template>
-
-      <template #default="maxHeight">
-        <NEmpty v-if="!selectedDictType" description="请先选择左侧字典类型" class="flex-1 justify-center" />
-        <NDataTable
-          v-else
-          :columns="dataColumns"
-          :data="dictDataList"
-          :loading="dataLoading"
-          :pagination="dataPagination"
-          :row-key="(row) => row.id"
-          remote
-          :max-height="maxHeight - 80"
-          size="small"
-          striped
-          scroll-x="fit-content"
-        />
-      </template>
-    </Page>
+    <!-- 同一页面调用两次 usePage，两套状态完全独立 -->
+    <TypePage />
+    <DataPage />
   </div>
 
-  <DictTypeForm v-model:show="typeFormVisible" :mode="typeFormMode" :record="editingType" @success="fetchDictTypes" />
-  <DictDataForm
-    v-model:show="dataFormVisible"
-    :mode="dataFormMode"
-    :record="editingData"
-    :dict-type="selectedDictType?.dictType"
-    :dict-type-id="selectedDictType?.id"
-    @success="fetchDictData"
-  />
+  <TypeFormModal @success="typePageApi.refresh" />
+  <DataFormModal @success="dataPageApi.refresh" />
 </template>
 
 <script setup lang="ts">
@@ -131,296 +19,193 @@ import {
   GetDictDataList,
   GetDictTypeList,
 } from "@/api/system-management";
-import type { CommonStatus, IQueryDictDataParams } from "@/api/types";
-import { Page, Permission, SearchForm } from "@/components";
+import type { IQueryDictDataParams } from "@/api/types";
+import { useModal, usePage } from "@/hooks";
 import Add24Regular from "@vicons/fluent/es/Add24Regular";
-import { NButton, NDataTable, NEmpty, NFormItem, NIcon, NInput, NSelect, useDialog, useMessage } from "naive-ui";
-import { computed, onMounted, reactive, ref } from "vue";
+import { ref } from "vue";
 import {
-  createDictDataColumns,
-  createDictTypeColumns,
-  statusOptions,
+  BuildDictDataParams,
+  CreateDataColumns,
+  CreateDataSearchSchema,
+  CreateTypeColumns,
+  FilterDictDataRows,
+  FilterTypeRows,
+  TypeSearchSchema,
+  type IDictDataListParams,
+  type IDictDataModalData,
+  type IDictDataQuery,
   type IDictDataRow,
+  type IDictTypeModalData,
+  type IDictTypeQuery,
   type IDictTypeRow,
 } from "./data";
 import DictDataForm from "./modules/data-form.vue";
 import DictTypeForm from "./modules/type-form.vue";
 
-interface TypeQuery {
-  dictName?: string;
-  dictType?: string;
-  status?: CommonStatus | null;
-}
-
-interface DataQuery {
-  dictLabel?: string;
-  dictValue?: string;
-  status?: CommonStatus | null;
-}
-
-const message = useMessage();
-const dialog = useDialog();
-
-const typeLoading = ref(false);
-const dataLoading = ref(false);
-const dictTypeListRaw = ref<IDictTypeRow[]>([]);
-const dictDataList = ref<IDictDataRow[]>([]);
+/** 主从联动的关键状态：当前选中的字典类型（左表行点击设置，右表取数依赖它） */
 const selectedDictType = ref<IDictTypeRow | null>(null);
-const dataUseClientMode = ref(false);
 
-const typeQuery = reactive<TypeQuery>({
-  dictName: undefined,
-  dictType: undefined,
-  status: null,
-});
+const [TypeFormModal, typeFormModalApi] = useModal<IDictTypeModalData>({ connectedComponent: DictTypeForm });
+const [DataFormModal, dataFormModalApi] = useModal<IDictDataModalData>({ connectedComponent: DictDataForm });
 
-const dataQuery = reactive<DataQuery>({
-  dictLabel: undefined,
-  dictValue: undefined,
-  status: null,
-});
+/* -------------------------------- 左表：字典类型 -------------------------------- */
 
-const typeFormVisible = ref(false);
-const typeFormMode = ref<"create" | "edit">("create");
-const editingType = ref<IDictTypeRow | null>(null);
+const [TypePage, typePageApi] = usePage<IDictTypeRow, IDictTypeQuery>({
+  title: "字典类型",
 
-const dataFormVisible = ref(false);
-const dataFormMode = ref<"create" | "edit">("create");
-const editingData = ref<IDictDataRow | null>(null);
-
-const dataPagination = reactive({
-  page: 1,
-  pageSize: 10,
-  itemCount: 0,
-  showSizePicker: true,
-  pageSizes: [10, 20, 50],
-  prefix: ({ itemCount }: { itemCount?: number }) => `共 ${itemCount ?? 0} 条`,
-  onChange: (page: number) => {
-    dataPagination.page = page;
-    fetchDictData();
+  api: {
+    // 类型数量有限，一次拉全量走客户端过滤
+    list: async () => (await GetDictTypeList({ pageNum: 1, pageSize: 200 })).rows,
   },
-  onUpdatePageSize: (pageSize: number) => {
-    dataPagination.pageSize = pageSize;
-    dataPagination.page = 1;
-    fetchDictData();
+
+  pagination: false,
+  heightOffset: 80,
+
+  search: {
+    defaults: () => ({ dictName: undefined, dictType: undefined, status: null }),
+    schema: TypeSearchSchema,
+    clientFilter: FilterTypeRows,
   },
-});
 
-const matchesTypeQuery = (row: IDictTypeRow): boolean => {
-  const dictName = typeQuery.dictName?.trim();
-  const dictType = typeQuery.dictType?.trim();
+  hooks: {
+    // 类型列表刷新后重新对齐选中项：被删除的类型要取消选中并清空右表
+    afterFetch: (rows) => {
+      if (!selectedDictType.value) return;
 
-  if (dictName && !row.dictName.includes(dictName)) return false;
-  if (dictType && !row.dictType.includes(dictType)) return false;
-  if (typeQuery.status !== undefined && typeQuery.status !== null && row.status !== typeQuery.status) {
-    return false;
-  }
-
-  return true;
-};
-
-const dictTypeList = computed(() => dictTypeListRaw.value.filter(matchesTypeQuery));
-
-const hasDataClientFilter = () => {
-  const dictValue = dataQuery.dictValue?.trim();
-  return Boolean(dictValue) || (dataQuery.status !== undefined && dataQuery.status !== null);
-};
-
-const filterDictDataRows = (rows: IDictDataRow[]): IDictDataRow[] => {
-  const dictLabel = dataQuery.dictLabel?.trim();
-  const dictValue = dataQuery.dictValue?.trim();
-
-  return rows.filter((row) => {
-    if (dictLabel && !row.dictLabel.includes(dictLabel)) return false;
-    if (dictValue && !row.dictValue.includes(dictValue)) return false;
-    if (dataQuery.status !== undefined && dataQuery.status !== null && row.status !== dataQuery.status) {
-      return false;
-    }
-    return true;
-  });
-};
-
-const buildDataQueryParams = (): IQueryDictDataParams => {
-  const params: IQueryDictDataParams = {
-    pageNum: dataPagination.page,
-    pageSize: dataPagination.pageSize,
-  };
-
-  if (selectedDictType.value) {
-    params.dictTypeId = selectedDictType.value.id;
-  }
-
-  const dictLabel = dataQuery.dictLabel?.trim();
-  if (dictLabel) params.dictLabel = dictLabel;
-
-  return params;
-};
-
-const fetchDictTypes = async () => {
-  try {
-    typeLoading.value = true;
-    const { rows } = await GetDictTypeList({ pageNum: 1, pageSize: 200 });
-    dictTypeListRaw.value = rows;
-
-    if (selectedDictType.value) {
-      const current = dictTypeListRaw.value.find((item) => item.id === selectedDictType.value?.id);
+      const current = rows.find((item) => item.id === selectedDictType.value?.id);
       selectedDictType.value = current ?? null;
-    }
-  } catch {
-    dictTypeListRaw.value = [];
-    selectedDictType.value = null;
-  } finally {
-    typeLoading.value = false;
-  }
-};
 
-const fetchDictData = async () => {
-  if (!selectedDictType.value) {
-    dictDataList.value = [];
-    dataPagination.itemCount = 0;
-    return;
-  }
-
-  try {
-    dataLoading.value = true;
-    dataUseClientMode.value = hasDataClientFilter();
-
-    if (dataUseClientMode.value) {
-      const allRows = await GetDictDataByType(selectedDictType.value.dictType);
-      const filteredRows = filterDictDataRows(allRows);
-      dataPagination.itemCount = filteredRows.length;
-
-      const start = (dataPagination.page - 1) * dataPagination.pageSize;
-      dictDataList.value = filteredRows.slice(start, start + dataPagination.pageSize);
-      return;
-    }
-
-    const { rows, total } = await GetDictDataList(buildDataQueryParams());
-    dictDataList.value = rows;
-    dataPagination.itemCount = total;
-  } catch {
-    dictDataList.value = [];
-    dataPagination.itemCount = 0;
-  } finally {
-    dataLoading.value = false;
-  }
-};
-
-const handleTypeSearch = () => {
-  // 字典类型为客户端过滤，无需重新请求
-};
-
-const handleTypeReset = () => {
-  typeQuery.dictName = undefined;
-  typeQuery.dictType = undefined;
-  typeQuery.status = null;
-};
-
-const handleDataSearch = () => {
-  if (!selectedDictType.value) return;
-  dataPagination.page = 1;
-  fetchDictData();
-};
-
-const handleDataReset = () => {
-  dataQuery.dictLabel = undefined;
-  dataQuery.dictValue = undefined;
-  dataQuery.status = null;
-  dataPagination.page = 1;
-  fetchDictData();
-};
-
-const handleSelectType = (row: IDictTypeRow) => {
-  selectedDictType.value = row;
-  dataPagination.page = 1;
-  fetchDictData();
-};
-
-const typeRowProps = (row: IDictTypeRow) => ({
-  style: "cursor: pointer",
-  onClick: () => handleSelectType(row),
-});
-
-const typeRowClassName = (row: IDictTypeRow) =>
-  selectedDictType.value?.id === row.id ? "dict-type-row--selected" : "";
-
-const handleCreateType = () => {
-  typeFormMode.value = "create";
-  editingType.value = null;
-  typeFormVisible.value = true;
-};
-
-const handleEditType = (row: IDictTypeRow) => {
-  typeFormMode.value = "edit";
-  editingType.value = row;
-  typeFormVisible.value = true;
-};
-
-const handleDeleteType = (row: IDictTypeRow) => {
-  dialog.warning({
-    title: "确认删除",
-    content: `确定要删除字典类型「${row.dictName}」吗？`,
-    positiveText: "确定",
-    negativeText: "取消",
-    onPositiveClick: async () => {
-      try {
-        await DeleteDictType(row.id);
-        message.success("删除成功");
-        if (selectedDictType.value?.id === row.id) {
-          selectedDictType.value = null;
-          dictDataList.value = [];
-          dataPagination.itemCount = 0;
-        }
-        await fetchDictTypes();
-      } catch {
-        // 错误提示由响应拦截器处理
+      if (!current) {
+        dataPageApi.search();
       }
     },
-  });
-};
+  },
 
-const handleCreateData = () => {
-  dataFormMode.value = "create";
-  editingData.value = null;
-  dataFormVisible.value = true;
-};
+  columns: CreateTypeColumns({
+    onEdit: (row) => typeFormModalApi.setData({ mode: "edit", record: row }).open(),
+    // 自定义删除逻辑：删除的是当前选中类型时，同步清空右表
+    onDelete: async (row) => {
+      await DeleteDictType(row.id);
 
-const handleEditData = (row: IDictDataRow) => {
-  dataFormMode.value = "edit";
-  editingData.value = row;
-  dataFormVisible.value = true;
-};
-
-const handleDeleteData = (row: IDictDataRow) => {
-  dialog.warning({
-    title: "确认删除",
-    content: `确定要删除字典数据「${row.dictLabel}」吗？`,
-    positiveText: "确定",
-    negativeText: "取消",
-    onPositiveClick: async () => {
-      try {
-        await DeleteDictData(row.id);
-        message.success("删除成功");
-        await fetchDictData();
-      } catch {
-        // 错误提示由响应拦截器处理
+      if (selectedDictType.value?.id === row.id) {
+        selectedDictType.value = null;
+        await dataPageApi.search();
       }
     },
-  });
+  }),
+
+  toolbar: [
+    {
+      label: "新增",
+      icon: Add24Regular,
+      auth: "system:dict-type:create",
+      onClick: () => typeFormModalApi.setData({ mode: "create", record: null }).open(),
+    },
+  ],
+
+  table: {
+    size: "small",
+    resizable: false,
+    // 行点击选中类型，右表回到第一页重新取数
+    rowProps: (row: IDictTypeRow) => ({
+      style: "cursor: pointer",
+      onClick: () => {
+        selectedDictType.value = row;
+        dataPageApi.search();
+      },
+    }),
+    rowClassName: (row: IDictTypeRow) => (selectedDictType.value?.id === row.id ? "dict-type-row--selected" : ""),
+  },
+});
+
+/* -------------------------------- 右表：字典数据 -------------------------------- */
+
+/**
+ * 混合取数策略（与原实现一致）：
+ * - 只按标签搜索（或无条件）：走服务端分页接口
+ * - 按键值 / 状态搜索：服务端接口不支持，改拉该类型全量数据后在前端过滤 + 手动分页
+ */
+const fetchDictData = async (params: IDictDataListParams) => {
+  const selected = selectedDictType.value;
+
+  // 未选中类型时右表恒为空（配合 emptyDescription 提示）
+  if (!selected) return { rows: [], total: 0 };
+
+  const useClientMode = Boolean(params.dictValue) || (params.status !== undefined && params.status !== null);
+
+  if (useClientMode) {
+    const allRows = await GetDictDataByType(selected.dictType);
+    const filteredRows = FilterDictDataRows(allRows, params);
+    const start = (params.pageNum - 1) * params.pageSize;
+
+    return {
+      rows: filteredRows.slice(start, start + params.pageSize),
+      total: filteredRows.length,
+    };
+  }
+
+  const query: IQueryDictDataParams = {
+    pageNum: params.pageNum,
+    pageSize: params.pageSize,
+    dictTypeId: selected.id,
+  };
+  if (params.dictLabel) query.dictLabel = params.dictLabel;
+
+  return GetDictDataList(query);
 };
 
-const typeColumns = createDictTypeColumns({
-  onEdit: handleEditType,
-  onDelete: handleDeleteType,
-});
+const [DataPage, dataPageApi] = usePage<IDictDataRow, IDictDataQuery, IDictDataListParams>({
+  title: "字典数据",
 
-const dataColumns = createDictDataColumns({
-  onEdit: handleEditData,
-  onDelete: handleDeleteData,
-});
+  api: {
+    list: fetchDictData,
+    delete: (row) => DeleteDictData(row.id),
+  },
 
-onMounted(() => {
-  fetchDictTypes();
+  pagination: { pageSizes: [10, 20, 50] },
+  heightOffset: 80,
+  emptyDescription: () => (selectedDictType.value ? "暂无数据" : "请先选择左侧字典类型"),
+
+  search: {
+    defaults: () => ({ dictLabel: undefined, dictValue: undefined, status: null }),
+    schema: CreateDataSearchSchema({ isTypeSelected: () => Boolean(selectedDictType.value) }),
+    buildParams: BuildDictDataParams,
+  },
+
+  columns: CreateDataColumns({
+    onEdit: (row) =>
+      dataFormModalApi
+        .setData({
+          mode: "edit",
+          record: row,
+          dictType: selectedDictType.value?.dictType,
+          dictTypeId: selectedDictType.value?.id,
+        })
+        .open(),
+  }),
+
+  toolbar: [
+    {
+      label: "新增",
+      icon: Add24Regular,
+      auth: "system:dict-data:create",
+      disabled: () => !selectedDictType.value,
+      onClick: () =>
+        dataFormModalApi
+          .setData({
+            mode: "create",
+            record: null,
+            dictType: selectedDictType.value?.dictType,
+            dictTypeId: selectedDictType.value?.id,
+          })
+          .open(),
+    },
+  ],
+
+  table: {
+    size: "small",
+    resizable: false,
+  },
 });
 </script>
 

@@ -1,6 +1,5 @@
-import type { ILoginLog } from "@/api/types";
-import { useUserStore } from "@/stores";
-import { RenderColumnTitle, type NaiveType } from "@/utils";
+import type { ILoginLog, IQueryLoginLogParams } from "@/api/types";
+import type { PageColumn, SearchFieldSchema } from "@/hooks";
 import CalendarLtr24Regular from "@vicons/fluent/es/CalendarLtr24Regular";
 import Delete24Regular from "@vicons/fluent/es/Delete24Regular";
 import Eye24Regular from "@vicons/fluent/es/Eye24Regular";
@@ -8,132 +7,95 @@ import Globe24Regular from "@vicons/fluent/es/Globe24Regular";
 import Options24Regular from "@vicons/fluent/es/Options24Regular";
 import Person24Regular from "@vicons/fluent/es/Person24Regular";
 import Status24Regular from "@vicons/fluent/es/Status24Regular";
-import { NButton, NIcon, NSpace, NTag, type DataTableColumns } from "naive-ui";
-import { h, type Component } from "vue";
+import { NTag } from "naive-ui";
+import { h } from "vue";
 
+/** 搜索区的查询模型 */
+export type ILoginLogQuery = Pick<IQueryLoginLogParams, "username" | "status">;
+
+/** 登录状态下拉选项（搜索区） */
 export const loginStatusOptions = [
   { label: "成功", value: "success" },
   { label: "失败", value: "fail" },
 ];
 
+/** 登录状态 -> 标签展示映射（列表列与详情弹窗共用） */
 export const loginStatusMap: Record<string, { label: string; type: "success" | "error" }> = {
   success: { label: "成功", type: "success" },
   fail: { label: "失败", type: "error" },
 };
 
-const renderActionButton = (label: string, icon: Component, type: NaiveType, onClick: () => void) => {
-  return h(
-    NButton,
-    { text: true, type, onClick },
-    {
-      icon: () => h(NIcon, null, { default: () => h(icon) }),
-      default: () => label,
-    },
-  );
-};
+/** 搜索表单 schema */
+export const searchSchema: SearchFieldSchema<ILoginLogQuery>[] = [
+  { field: "username", label: "登录用户" },
+  { field: "status", label: "登录状态", component: "select", props: { options: loginStatusOptions } },
+];
 
-export interface ILoginLogColumnHandlers {
-  onDelete: (row: ILoginLog) => void;
-  onDetail?: (row: ILoginLog) => void;
-}
-
-export const createLoginLogColumns = (handlers: ILoginLogColumnHandlers): DataTableColumns<ILoginLog> => {
-  const userStore = useUserStore();
-
-  return [
-    {
-      title: RenderColumnTitle(Person24Regular, "登录账号"),
-      key: "username",
-      minWidth: 120,
-      align: "center",
-      titleAlign: "center",
-      ellipsis: { tooltip: true },
+/** 列定义工厂：查看详情回调由页面注入 */
+export const createColumns = (handlers: { onDetail: (row: ILoginLog) => void }): PageColumn<ILoginLog>[] => [
+  { type: "index" },
+  { key: "username", title: "登录账号", icon: Person24Regular, minWidth: 120, ellipsis: { tooltip: true } },
+  { key: "loginIp", title: "登录 IP", icon: Globe24Regular, width: 140, render: (row) => row.loginIp || "-" },
+  {
+    key: "loginLocation",
+    title: "登录地点",
+    icon: Globe24Regular,
+    minWidth: 120,
+    ellipsis: { tooltip: true },
+    render: (row) => row.loginLocation || "-",
+  },
+  {
+    key: "browser",
+    title: "浏览器",
+    icon: Globe24Regular,
+    minWidth: 120,
+    ellipsis: { tooltip: true },
+    render: (row) => row.browser || "-",
+  },
+  {
+    key: "os",
+    title: "操作系统",
+    icon: Globe24Regular,
+    minWidth: 120,
+    ellipsis: { tooltip: true },
+    render: (row) => row.os || "-",
+  },
+  {
+    key: "status",
+    title: "登录状态",
+    icon: Status24Regular,
+    width: 100,
+    render: (row) => {
+      const current = loginStatusMap[row.status] ?? { label: "未知", type: "error" as const };
+      return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
     },
-    {
-      title: RenderColumnTitle(Globe24Regular, "登录 IP"),
-      key: "loginIp",
-      width: 140,
-      align: "center",
-      titleAlign: "center",
-      render: (row) => row.loginIp || "-",
-    },
-    {
-      title: RenderColumnTitle(Globe24Regular, "登录地点"),
-      key: "loginLocation",
-      minWidth: 120,
-      align: "center",
-      titleAlign: "center",
-      ellipsis: { tooltip: true },
-      render: (row) => row.loginLocation || "-",
-    },
-    {
-      title: RenderColumnTitle(Globe24Regular, "浏览器"),
-      key: "browser",
-      minWidth: 120,
-      align: "center",
-      titleAlign: "center",
-      ellipsis: { tooltip: true },
-      render: (row) => row.browser || "-",
-    },
-    {
-      title: RenderColumnTitle(Globe24Regular, "操作系统"),
-      key: "os",
-      minWidth: 120,
-      align: "center",
-      titleAlign: "center",
-      ellipsis: { tooltip: true },
-      render: (row) => row.os || "-",
-    },
-    {
-      title: RenderColumnTitle(Status24Regular, "登录状态"),
-      key: "status",
-      width: 100,
-      align: "center",
-      titleAlign: "center",
-      render: (row) => {
-        const current = loginStatusMap[row.status] ?? { label: "未知", type: "error" as const };
-        return h(NTag, { type: current.type, size: "small" }, { default: () => current.label });
+  },
+  {
+    key: "message",
+    title: "提示消息",
+    icon: Status24Regular,
+    minWidth: 140,
+    ellipsis: { tooltip: true },
+    render: (row) => row.message || "-",
+  },
+  { key: "loginAt", title: "登录时间", icon: CalendarLtr24Regular, width: 180 },
+  {
+    type: "actions",
+    icon: Options24Regular,
+    width: 140,
+    actions: [
+      {
+        label: "详情",
+        icon: Eye24Regular,
+        onClick: handlers.onDetail,
       },
-    },
-    {
-      title: RenderColumnTitle(Status24Regular, "提示消息"),
-      key: "message",
-      minWidth: 140,
-      align: "center",
-      titleAlign: "center",
-      ellipsis: { tooltip: true },
-      render: (row) => row.message || "-",
-    },
-    {
-      title: RenderColumnTitle(CalendarLtr24Regular, "登录时间"),
-      key: "loginAt",
-      width: 180,
-      align: "center",
-      titleAlign: "center",
-    },
-    {
-      title: RenderColumnTitle(Options24Regular, "操作"),
-      key: "actions",
-      width: 140,
-      align: "center",
-      titleAlign: "center",
-      fixed: "right",
-      render: (row) =>
-        h(
-          NSpace,
-          { size: 8, justify: "center", inline: true },
-          {
-            default: () =>
-              [
-                handlers.onDetail
-                  ? renderActionButton("详情", Eye24Regular, "primary", () => handlers.onDetail!(row))
-                  : null,
-                userStore.hasPermission("system:login-log:delete")
-                  ? renderActionButton("删除", Delete24Regular, "error", () => handlers.onDelete(row))
-                  : null,
-              ].filter(Boolean),
-          },
-        ),
-    },
-  ];
-};
+      {
+        label: "删除",
+        icon: Delete24Regular,
+        buttonType: "error",
+        auth: "system:login-log:delete",
+        confirm: () => "确定要删除该登录日志吗？",
+      },
+    ],
+  },
+];

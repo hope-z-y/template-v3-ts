@@ -5,7 +5,6 @@ import { NButton, NCheckbox, NFlex, NIcon, NPopover, NScrollbar, NTooltip } from
 import {
   computed,
   defineComponent,
-  getCurrentInstance,
   nextTick,
   onMounted,
   onUnmounted,
@@ -15,58 +14,51 @@ import {
   type PropType,
   type SlotsType,
 } from "vue";
+import type { ColumnVisibilityOption } from "../modules/column-visibility";
 
-export interface PageColumnOption {
-  key: string;
-  title: string;
-  visible: boolean;
-  /** 不可取消显示的列（如操作列、多选列） */
-  disabled?: boolean;
-}
-
-const Page = defineComponent({
+/**
+ * 页面布局壳（usePage 内部组件，不对外导出）。
+ * 吸收自原 components/page：负责纯视图层的事情——
+ * 搜索区显隐切换、标题栏、刷新按钮、列设置弹出层、表格区高度测量。
+ * 数据与业务逻辑一概不管，全部通过 props / slots 从 usePage 注入。
+ */
+export default defineComponent({
   name: "PageWrapper",
   props: {
-    /** Title */
     title: {
       type: String,
-      required: false,
       default: "",
     },
-    /** 表格列显隐配置，配合 v-model:column-options 使用 */
+    /** 列设置弹出层的数据源，不传则不渲染"列设置"按钮 */
     columnOptions: {
-      type: Array as PropType<PageColumnOption[]>,
+      type: Array as PropType<ColumnVisibilityOption[]>,
       default: undefined,
     },
-    /** 是否显示搜索区域，配合 v-model:show-search 使用 */
-    showSearch: {
-      type: Boolean,
+    /** 点击刷新按钮的回调，返回 Promise 时按钮自动进入 loading */
+    onRefresh: {
+      type: Function as PropType<() => Promise<void> | void>,
+      required: true,
+    },
+    /** 列设置勾选变化回调 */
+    onColumnVisibleChange: {
+      type: Function as PropType<(key: string, visible: boolean) => void>,
       default: undefined,
     },
   },
-  emits: ["refresh", "update:columnOptions", "update:showSearch"],
   slots: Object as SlotsType<{
+    /** 表格区，参数为容器实测高度，用于 NDataTable 的 max-height */
     default?: (maxHeight: number) => unknown;
-    title?: () => unknown;
     search?: () => unknown;
     toolbar?: () => unknown;
     footer?: () => unknown;
   }>,
-  setup(props, { slots, emit }) {
-    const instance = getCurrentInstance();
+  setup(props, { slots }) {
     const container = useTemplateRef<HTMLDivElement>("container");
+    /** 表格容器的实际高度，通过 ResizeObserver 实时测量后传给默认插槽 */
     const maxHeight = ref(0);
     const columnPopoverVisible = ref(false);
-    const internalShowSearch = ref(true);
+    const searchVisible = ref(true);
     const refreshing = ref(false);
-
-    const searchVisible = computed({
-      get: () => props.showSearch ?? internalShowSearch.value,
-      set: (value: boolean) => {
-        internalShowSearch.value = value;
-        emit("update:showSearch", value);
-      },
-    });
 
     const hasColumnOptions = computed(() => Boolean(props.columnOptions?.length));
     const hasSearchSlot = computed(() => Boolean(slots.search));
@@ -92,41 +84,22 @@ const Page = defineComponent({
       resizeObserver?.disconnect();
     });
 
+    // 搜索区折叠/展开会改变表格可用高度，等 DOM 更新后重新测量
     watch(searchVisible, () => {
       nextTick(() => {
         requestAnimationFrame(updateMaxHeight);
       });
     });
 
-    const toggleSearchVisible = () => {
-      searchVisible.value = !searchVisible.value;
-    };
-
     const handleRefresh = async () => {
       if (refreshing.value) return;
 
       refreshing.value = true;
       try {
-        const handler = instance?.vnode.props?.onRefresh;
-        if (Array.isArray(handler)) {
-          await Promise.all(handler.map((item) => item()));
-        } else if (typeof handler === "function") {
-          await handler();
-        } else {
-          emit("refresh");
-        }
+        await props.onRefresh();
       } finally {
         refreshing.value = false;
       }
-    };
-
-    const handleColumnVisibleChange = (key: string, visible: boolean) => {
-      if (!props.columnOptions) return;
-
-      emit(
-        "update:columnOptions",
-        props.columnOptions.map((column) => (column.key === key ? { ...column, visible } : column)),
-      );
     };
 
     const renderColumnPopover = () => (
@@ -139,7 +112,7 @@ const Page = defineComponent({
                 key={column.key}
                 checked={column.visible}
                 disabled={column.disabled}
-                onUpdateChecked={(checked) => handleColumnVisibleChange(column.key, checked)}
+                onUpdateChecked={(checked) => props.onColumnVisibleChange?.(column.key, checked)}
               >
                 {column.title}
               </NCheckbox>
@@ -172,7 +145,7 @@ const Page = defineComponent({
                   circle
                   tertiary
                   type={searchVisible.value ? "primary" : "default"}
-                  onClick={toggleSearchVisible}
+                  onClick={() => (searchVisible.value = !searchVisible.value)}
                 >
                   {{
                     icon: () => <NIcon component={Search24Regular} />,
@@ -224,9 +197,7 @@ const Page = defineComponent({
         )}
         <main class="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div class="flex w-full shrink-0 items-center justify-between gap-3 overflow-hidden py-1.5">
-            {(slots.title || props.title) && (
-              <div class="min-w-0 text-lg font-bold">{slots.title ? slots.title() : props.title}</div>
-            )}
+            {props.title && <div class="min-w-0 text-lg font-bold">{props.title}</div>}
             <div class="ml-auto rounded-full">{renderActionButtons()}</div>
           </div>
 
@@ -240,5 +211,3 @@ const Page = defineComponent({
     );
   },
 });
-
-export default Page;

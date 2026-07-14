@@ -12,6 +12,7 @@ vi.mock("@/request", () => ({ request: requestMock }));
 import {
   CleanLoginLogs,
   CleanOperLogs,
+  GetAllDictData,
   GetAllUsers,
   GetConfigByKey,
   GetDictDataByType,
@@ -36,12 +37,14 @@ describe("system-management 后端契约", () => {
 
   it("使用参数、字典和日志兼容路径", () => {
     GetConfigByKey("site.name");
+    GetAllDictData();
     GetDictDataByType("common_status");
     CleanLoginLogs();
     CleanOperLogs();
 
     expect(requestMock.get).toHaveBeenNthCalledWith(1, "/system/parameter/key/site.name");
-    expect(requestMock.get).toHaveBeenNthCalledWith(2, "/system/dict/data/type/common_status");
+    expect(requestMock.get).toHaveBeenNthCalledWith(2, "/system/dict/data/all");
+    expect(requestMock.get).toHaveBeenNthCalledWith(3, "/system/dict/data/type/common_status");
     expect(requestMock.delete).toHaveBeenNthCalledWith(1, "/system/login-log/clean");
     expect(requestMock.delete).toHaveBeenNthCalledWith(2, "/system/operation-log/clean");
   });
