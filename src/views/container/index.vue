@@ -33,26 +33,27 @@
           <template #trigger>
             <NIcon
               :size="24"
-              :component="theme === 'dark' ? WeatherSunny24Regular : WeatherMoon24Regular"
+              :component="resolvedTheme === 'dark' ? WeatherSunny24Regular : WeatherMoon24Regular"
               @click="toggleTheme"
             />
           </template>
-          {{ theme === "dark" ? "浅色模式" : "深色模式" }}
+          {{ resolvedTheme === "dark" ? "浅色模式" : "深色模式" }}
         </NTooltip>
         <NPopover v-model:show="userPopoverVisible" trigger="hover" placement="bottom-end">
           <template #trigger>
-            <NAvatar
-              round
-              class="cursor-pointer shrink-0"
-              :style="{
-                color: 'yellow',
-                backgroundColor: 'red',
-              }"
+            <button
+              type="button"
+              class="flex cursor-pointer items-center gap-2 rounded-full border-0 bg-transparent p-0 text-left"
             >
-              {{ userInfo?.username || userInfo?.account || "未命名" }}
-            </NAvatar>
+              <NAvatar round class="shrink-0" :src="userInfo?.avatar || UserAvatar">
+                {{ (userInfo?.username || userInfo?.account || "?").slice(0, 1) }}
+              </NAvatar>
+              <span class="hidden max-w-44 truncate text-sm text-black/65 lg:block dark:text-white/70">
+                {{ userInfo?.email || userInfo?.account || "未设置账号" }}
+              </span>
+            </button>
           </template>
-          <UserAction />
+          <UserAction @select="userPopoverVisible = false" />
         </NPopover>
       </div>
     </template>
@@ -62,22 +63,16 @@
     <template #menu>
       <Menu />
     </template>
-    <div ref="routeViewRef" class="size-full min-h-0">
-      <RouterView v-slot="{ Component, route: viewRoute }">
-        <KeepAlive>
-          <component :is="Component" v-if="viewRoute.meta.keepAlive" :key="viewKey" />
-        </KeepAlive>
-        <component :is="Component" v-if="!viewRoute.meta.keepAlive" :key="viewKey" />
-      </RouterView>
-    </div>
+    <div class="size-full min-h-0"><RouteView /></div>
   </Layout>
+  <LockScreen />
 </template>
 
 <script setup lang="ts">
 import { Layout } from "@/components";
-import { useGlobalConfig } from "@/hooks";
+import UserAvatar from "@/assets/images/Vue.png";
+import { useGlobalConfig, useLockScreen } from "@/hooks";
 import { useMenuStore, useUserStore } from "@/stores";
-import { useMenuTagStore } from "@/stores/menu-tag";
 import type { RouteMenuOption } from "@/utils";
 import FullScreenMaximize24Regular from "@vicons/fluent/es/FullScreenMaximize24Regular";
 import FullScreenMinimize24Regular from "@vicons/fluent/es/FullScreenMinimize24Regular";
@@ -87,11 +82,12 @@ import WeatherSunny24Regular from "@vicons/fluent/es/WeatherSunny24Regular";
 import { useFullscreen } from "@vueuse/core";
 import { NAvatar, NIcon, NPopover, NTooltip } from "naive-ui";
 import { storeToRefs } from "pinia";
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import Breadcrumbs from "./modules/breadcrumb.vue";
 import Menu from "./modules/menu.vue";
 import MenuTag from "./modules/menu-tag.vue";
+import LockScreen from "./modules/lock-screen.vue";
+import RouteView from "./modules/route-view.vue";
 import Search from "./modules/search.vue";
 import UserAction from "./modules/user-action.vue";
 
@@ -102,45 +98,16 @@ interface MenuSearchItem {
   keywords?: string[];
 }
 
-const route = useRoute();
-const menuTagStore = useMenuTagStore();
-const viewKey = computed(() => menuTagStore.getViewKey(route.path));
-const routeViewRef = ref<HTMLElement | null>(null);
-let routeViewAnimation: Animation | null = null;
-
-/** 仅让主内容区轻柔入场，保留 KeepAlive 实例，不影响侧栏和顶部导航。 */
-watch(
-  () => route.path,
-  async (path, previousPath) => {
-    if (!previousPath || path === previousPath) return;
-
-    await nextTick();
-
-    const element = routeViewRef.value;
-    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (!element?.animate || reduceMotion) return;
-
-    routeViewAnimation?.cancel();
-    routeViewAnimation = element.animate(
-      [
-        { opacity: 0.55, transform: "translateY(8px) scale(0.995)", filter: "blur(2px)" },
-        { opacity: 1, transform: "translateY(0) scale(1)", filter: "blur(0)" },
-      ],
-      {
-        duration: 240,
-        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-      },
-    );
-  },
-);
-
-onBeforeUnmount(() => routeViewAnimation?.cancel());
 const menuStore = useMenuStore();
 const { menus } = storeToRefs(menuStore);
 
 const { userInfo } = storeToRefs(useUserStore());
-const { theme, toggleTheme, collapse, toggleCollapse } = useGlobalConfig();
+const { resolvedTheme, toggleTheme, collapse, toggleCollapse } = useGlobalConfig();
 const { isFullscreen, toggle } = useFullscreen();
+const { startAutoLock } = useLockScreen();
+let stopAutoLock: (() => void) | undefined;
+onMounted(() => (stopAutoLock = startAutoLock()));
+onBeforeUnmount(() => stopAutoLock?.());
 
 const userPopoverVisible = ref(false);
 

@@ -66,7 +66,7 @@ export interface PageSearchOptions<TRow, TQuery, TParams> {
    * query 是响应式的，因此过滤结果会随输入实时联动（与现部门/菜单页行为一致）
    */
   clientFilter?: (rows: TRow[], query: TQuery) => TRow[];
-  /** 搜索区每行的最大表单项列数，默认 3；实际列数会随容器宽度自动调整 */
+  /** 搜索区每行的最大表单项列数，默认 4；实际列数会随容器宽度自动调整 */
   columns?: number;
   /** 整块逃生舱：完全接管搜索区渲染（schema 配置将被忽略） */
   render?: () => VNodeChild;
@@ -152,9 +152,10 @@ export interface PageIndexColumn {
 }
 
 /** 多选列：勾选状态由 pageApi.checkedRowKeys 维护 */
-export interface PageSelectionColumn {
+export interface PageSelectionColumn<TRow> {
   type: "selection";
   width?: number;
+  disabled?: (row: TRow) => boolean;
 }
 
 /** 操作列：自动渲染文字按钮组，内置权限过滤与二次确认 */
@@ -167,7 +168,8 @@ export interface PageActionsColumn<TRow> {
   actions: PageRowAction<TRow>[];
 }
 
-export type PageColumn<TRow> = PageDataColumn<TRow> | PageIndexColumn | PageSelectionColumn | PageActionsColumn<TRow>;
+export type PageColumn<TRow> =
+  PageDataColumn<TRow> | PageIndexColumn | PageSelectionColumn<TRow> | PageActionsColumn<TRow>;
 
 /* -------------------------------------------------------------------------- */
 /*                                  usePage 配置                               */

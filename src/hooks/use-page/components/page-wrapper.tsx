@@ -1,4 +1,6 @@
 import ArrowSync24Regular from "@vicons/fluent/es/ArrowSync24Regular";
+import FullScreenMaximize24Regular from "@vicons/fluent/es/FullScreenMaximize24Regular";
+import FullScreenMinimize24Regular from "@vicons/fluent/es/FullScreenMinimize24Regular";
 import Grid24Regular from "@vicons/fluent/es/Grid24Regular";
 import Search24Regular from "@vicons/fluent/es/Search24Regular";
 import { NButton, NCheckbox, NFlex, NIcon, NPopover, NScrollbar, NTooltip } from "naive-ui";
@@ -15,6 +17,7 @@ import {
   type SlotsType,
 } from "vue";
 import type { ColumnVisibilityOption } from "../modules/column-visibility";
+import { createPageFullscreen } from "../modules/fullscreen";
 
 /**
  * 页面布局壳（usePage 内部组件，不对外导出）。
@@ -53,7 +56,9 @@ export default defineComponent({
     footer?: () => unknown;
   }>,
   setup(props, { slots }) {
+    const pageRoot = useTemplateRef<HTMLDivElement>("pageRoot");
     const container = useTemplateRef<HTMLDivElement>("container");
+    const { isFullscreen, toggle: toggleFullscreen } = createPageFullscreen(pageRoot);
     /** 表格容器的实际高度，通过 ResizeObserver 实时测量后传给默认插槽 */
     const maxHeight = ref(0);
     const columnPopoverVisible = ref(false);
@@ -85,7 +90,7 @@ export default defineComponent({
     });
 
     // 搜索区折叠/展开会改变表格可用高度，等 DOM 更新后重新测量
-    watch(searchVisible, () => {
+    watch([searchVisible, isFullscreen], () => {
       nextTick(() => {
         requestAnimationFrame(updateMaxHeight);
       });
@@ -185,11 +190,34 @@ export default defineComponent({
             }}
           </NPopover>
         )}
+        <NTooltip trigger="hover">
+          {{
+            trigger: () => (
+              <NButton
+                circle
+                tertiary
+                aria-label={isFullscreen.value ? "退出数据全屏" : "数据区域全屏"}
+                type={isFullscreen.value ? "primary" : "default"}
+                onClick={toggleFullscreen}
+              >
+                {{
+                  icon: () => (
+                    <NIcon component={isFullscreen.value ? FullScreenMinimize24Regular : FullScreenMaximize24Regular} />
+                  ),
+                }}
+              </NButton>
+            ),
+            default: () => (isFullscreen.value ? "退出数据全屏" : "数据区域全屏"),
+          }}
+        </NTooltip>
       </NFlex>
     );
 
     return () => (
-      <div class="flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden">
+      <div
+        ref="pageRoot"
+        class={["flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden", isFullscreen.value ? "bg p-4" : ""]}
+      >
         {hasSearchSlot.value && (
           <header v-show={searchVisible.value} class="shrink-0">
             {slots.search?.()}

@@ -35,6 +35,23 @@ export type ISignOutParams = IRefreshTokenParams;
 /** POST /auth/refresh 响应体 */
 export type IRefreshTokenResponse = IAuthTokenResponse;
 
+export interface IUpdateCurrentProfileParams {
+  username?: string;
+  phone?: string | null;
+  email?: string | null;
+  avatar?: string | null;
+  gender?: "unknown" | "male" | "female";
+}
+
+export interface IVerifyCurrentPasswordParams {
+  password: string;
+}
+
+export interface IChangeCurrentPasswordParams {
+  currentPassword: string;
+  newPassword: string;
+}
+
 /** 后端雪花 ID 始终按字符串接收，避免转成 JavaScript number 后丢失精度。 */
 export type AuthEntityId = string;
 

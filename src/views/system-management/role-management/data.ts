@@ -34,6 +34,8 @@ export const SearchSchema: SearchFieldSchema<IRoleQuery>[] = [
   { field: "status", label: "状态", component: "select", props: { options: CommonStatusOptions } },
 ];
 
+export const IsSuperAdminRole = (row: IRoleRow) => row.roleKey === "admin";
+
 /** 列定义工厂：编辑回调由页面注入 */
 export const CreateColumns = (handlers: { onEdit: (row: IRoleRow) => void }): PageColumn<IRoleRow>[] => [
   { type: "index" },
@@ -67,6 +69,7 @@ export const CreateColumns = (handlers: { onEdit: (row: IRoleRow) => void }): Pa
         label: "编辑",
         icon: Edit24Regular,
         auth: "system:role:update",
+        show: (row) => !IsSuperAdminRole(row),
         onClick: handlers.onEdit,
       },
       {
@@ -74,6 +77,7 @@ export const CreateColumns = (handlers: { onEdit: (row: IRoleRow) => void }): Pa
         icon: Delete24Regular,
         buttonType: "error",
         auth: "system:role:delete",
+        show: (row) => !IsSuperAdminRole(row),
         confirm: (row) => `确定要删除角色「${row.roleName}」吗？`,
       },
     ],

@@ -35,3 +35,13 @@ html {
 .search-form-fields {
   grid-template-columns: repeat(var(--search-form-columns), minmax(0, 1fr));
 }
+
+html[data-density="compact"] .search-form {
+  padding: 0.25rem;
+}
+
+html[data-density="compact"] .n-data-table .n-data-table-td,
+html[data-density="compact"] .n-data-table .n-data-table-th {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}

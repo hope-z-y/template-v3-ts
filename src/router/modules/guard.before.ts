@@ -1,4 +1,5 @@
 import { useMenuStore, useUserStore } from "@/stores";
+import { useLockScreen } from "@/hooks/use-lock-screen";
 import type { RouteLocation } from "vue-router";
 import { getKnownRoutePermission } from "./permission-map";
 import { FORBIDDEN_ROUTE_NAME, LOGIN_ROUTE_NAME } from "./routes";
@@ -25,6 +26,7 @@ export const GuardBefore = async (to: RouteLocation, _from: RouteLocation) => {
       return { name: "Home" };
     }
 
+    useLockScreen().clear();
     return true;
   }
 

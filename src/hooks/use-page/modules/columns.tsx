@@ -118,7 +118,7 @@ export const buildColumns = <TRow,>(
       }
 
       if (column.type === "selection") {
-        result.push({ type: "selection", width: column.width });
+        result.push({ type: "selection", width: column.width, disabled: column.disabled });
         continue;
       }
 

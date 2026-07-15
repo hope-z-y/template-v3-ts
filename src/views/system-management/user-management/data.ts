@@ -86,12 +86,14 @@ const getDisplayInitial = (row: IUserRow) => {
   return name.slice(0, 1).toUpperCase();
 };
 
+export const IsSuperAdminUser = (row: IUserRow) => row.roles.some((role) => role.roleKey === "admin");
+
 /** 列定义工厂：编辑 / 重置密码回调由页面注入 */
 export const CreateColumns = (handlers: {
   onEdit: (row: IUserRow) => void;
   onResetPassword: (row: IUserRow) => void;
 }): PageColumn<IUserRow>[] => [
-  { type: "selection" },
+  { type: "selection", disabled: IsSuperAdminUser },
   { type: "index" },
   {
     key: "username",
@@ -99,10 +101,12 @@ export const CreateColumns = (handlers: {
     icon: Person24Regular,
     minWidth: 140,
     maxWidth: 240,
+    align: "left",
+    titleAlign: "left",
     ellipsis: { tooltip: true },
     // 头像 + 用户名组合展示
     render: (row) =>
-      h("span", { class: "inline-flex items-center justify-center gap-2" }, [
+      h("span", { class: "inline-flex max-w-full items-center justify-start gap-2" }, [
         row.avatar
           ? h(NAvatar, { round: true, size: "small", src: row.avatar })
           : h(NAvatar, { round: true, size: "small" }, { default: () => getDisplayInitial(row) }),
@@ -162,16 +166,17 @@ export const CreateColumns = (handlers: {
         ? h(NTag, { type: "success", size: "small" }, { default: () => "启用" })
         : h(NTag, { type: "error", size: "small" }, { default: () => "禁用" }),
   },
-  { key: "createdAt", title: "创建时间", icon: CalendarLtr24Regular, minWidth: 180 },
+  { key: "createdAt", title: "创建时间", icon: CalendarLtr24Regular, width: 220 },
   {
     type: "actions",
     icon: Options24Regular,
-    minWidth: 260,
+    width: 260,
     actions: [
       {
         label: "编辑",
         icon: Edit24Regular,
         auth: "system:user:update",
+        show: (row) => !IsSuperAdminUser(row),
         onClick: handlers.onEdit,
       },
       {
@@ -179,6 +184,7 @@ export const CreateColumns = (handlers: {
         icon: KeyReset24Regular,
         buttonType: "warning",
         auth: "system:user:update",
+        show: (row) => !IsSuperAdminUser(row),
         onClick: handlers.onResetPassword,
       },
       {
@@ -186,6 +192,7 @@ export const CreateColumns = (handlers: {
         icon: Delete24Regular,
         buttonType: "error",
         auth: "system:user:delete",
+        show: (row) => !IsSuperAdminUser(row),
         confirm: (row) => `确定要删除用户「${row.username || row.account}」吗？`,
       },
     ],

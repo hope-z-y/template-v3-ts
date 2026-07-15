@@ -8,18 +8,32 @@ import {
   zhCN,
   dateZhCN,
   type GlobalTheme,
+  type GlobalThemeOverrides,
 } from "naive-ui";
 import { computed } from "vue";
-import { useGlobalConfig } from "@/hooks";
+import { themeColorTokens, useGlobalConfig } from "@/hooks";
 
-const { theme } = useGlobalConfig();
+const { resolvedTheme, themeColor, borderRadius, density } = useGlobalConfig();
 const currentTheme = computed<GlobalTheme | null>(() => {
-  return theme.value === "dark" ? darkTheme : null;
+  return resolvedTheme.value === "dark" ? darkTheme : null;
 });
 
-if (theme.value === "dark") {
-  document.documentElement.classList.add("dark");
-}
+const themeOverrides = computed<GlobalThemeOverrides>(() => {
+  const colors = themeColorTokens[themeColor.value];
+  const compact = density.value === "compact";
+  return {
+    common: {
+      primaryColor: colors.base,
+      primaryColorHover: colors.hover,
+      primaryColorPressed: colors.pressed,
+      primaryColorSuppl: colors.suppl,
+      borderRadius: `${borderRadius.value}px`,
+      borderRadiusSmall: `${Math.max(2, borderRadius.value - 2)}px`,
+      heightMedium: compact ? "30px" : "34px",
+      heightLarge: compact ? "36px" : "40px",
+    },
+  };
+});
 </script>
 
 <template>
@@ -27,6 +41,7 @@ if (theme.value === "dark") {
     :locale="zhCN"
     :date-locale="dateZhCN"
     :theme="currentTheme"
+    :theme-overrides="themeOverrides"
     class="size-full text-[#333333] dark:text-[#e5e5e5]"
   >
     <div class="size-full">

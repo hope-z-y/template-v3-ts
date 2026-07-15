@@ -4,6 +4,8 @@ import { BuildMenuIconMap, EnsureHomeMenuOption, MenusToOptions, STORE_KEY, type
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
+const STATIC_ACCOUNT_PATHS = ["/account/profile", "/account/settings"];
+
 /** 菜单与动态路由状态：数据来自 /auth/profile.menus（已按当前用户过滤）。 */
 export const useMenuStore = defineStore(STORE_KEY.MenuStore, () => {
   const menuTree = ref<IProfileMenu[]>([]);
@@ -37,7 +39,7 @@ export const useMenuStore = defineStore(STORE_KEY.MenuStore, () => {
     iconByPath.value = BuildMenuIconMap(options);
 
     import("@/stores/menu-tag").then(({ useMenuTagStore }) => {
-      useMenuTagStore().filterByPaths(collectNavigablePaths(options));
+      useMenuTagStore().filterByPaths([...collectNavigablePaths(options), ...STATIC_ACCOUNT_PATHS]);
     });
   };
 

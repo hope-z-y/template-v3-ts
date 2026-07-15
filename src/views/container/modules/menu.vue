@@ -1,13 +1,13 @@
 ﻿<template>
   <div class="grid grid-rows-[auto_1fr] h-full">
-    <NGradientText type="success" class="m-0 shrink-0 text-xl font-bold! text-center py-2">
-      {{ appName }}
+    <NGradientText type="success" class="m-0 shrink-0 truncate px-2 py-2 text-center text-xl font-bold!">
+      {{ collapse ? compactAppName : appName }}
     </NGradientText>
     <NMenu
       :options="menus"
       :value="activeKey"
-      :collapse="collapse"
-      :collapse-transition="false"
+      :collapsed="collapse"
+      :collapse-transition="true"
       :render-label="renderMenuLabel"
       :render-icon="renderMenuIcon"
       @update:value="handleMenuUpdate"
@@ -25,6 +25,10 @@ import { computed, h } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const appName = import.meta.env.VITE_APP_NAME;
+const compactAppName = String(appName || "V")
+  .trim()
+  .slice(0, 1)
+  .toUpperCase();
 
 const { collapse } = useGlobalConfig();
 const route = useRoute();

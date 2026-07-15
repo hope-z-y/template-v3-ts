@@ -31,6 +31,18 @@ export const staticRoutes: RouteRecordRaw[] = [
         component: () => import("@/views/home/index.vue"),
         meta: { title: "首页", icon: "HomeOutlined", affixed: true },
       },
+      {
+        path: "account/profile",
+        name: "AccountProfile",
+        component: () => import("@/views/account/profile/index.vue"),
+        meta: { title: "个人信息", icon: "UserOutlined" },
+      },
+      {
+        path: "account/settings",
+        name: "AccountSettings",
+        component: () => import("@/views/account/settings/index.vue"),
+        meta: { title: "应用设置", icon: "SettingOutlined" },
+      },
     ],
   },
   {

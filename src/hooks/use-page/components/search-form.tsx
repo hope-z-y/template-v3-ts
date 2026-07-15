@@ -6,10 +6,7 @@ import { useElementSize } from "@vueuse/core";
 import { NButton, NDatePicker, NForm, NFormItem, NIcon, NInput, NInputNumber, NSelect, NTreeSelect } from "naive-ui";
 import { computed, defineComponent, ref, type PropType, type VNodeChild } from "vue";
 import type { SearchFieldSchema } from "../types";
-
-const FIELD_MIN_WIDTH = 240;
-const LAYOUT_GAP = 8;
-const INLINE_ACTIONS_WIDTH = 248;
+import { calculateSearchColumns } from "../modules/search-layout";
 
 /**
  * schema 驱动的搜索表单（usePage 内部组件）。
@@ -34,7 +31,7 @@ export default defineComponent({
     /** 每行的最大表单项列数，实际列数会根据容器宽度自动调整 */
     columns: {
       type: Number,
-      default: 3,
+      default: 4,
     },
     onSearch: {
       type: Function as PropType<() => void>,
@@ -55,29 +52,10 @@ export default defineComponent({
     const { width: layoutWidth } = useElementSize(layoutRef);
 
     const maxColumns = computed(() => Math.max(1, Math.floor(props.columns)));
-    const targetColumns = computed(() => Math.min(maxColumns.value, Math.max(1, props.schema.length)));
 
-    /**
-     * 容器足够宽时按钮放在搜索项右侧；空间不足时按钮换到下一行，
-     * 优先保证搜索项仍能以舒适宽度展示。
-     */
-    const actionsBesideFields = computed(() => {
-      if (!layoutWidth.value) return true;
-
-      const fieldsWidth = targetColumns.value * FIELD_MIN_WIDTH + Math.max(0, targetColumns.value - 1) * LAYOUT_GAP;
-      return layoutWidth.value >= fieldsWidth + LAYOUT_GAP + INLINE_ACTIONS_WIDTH;
-    });
-
-    /** 当前容器实际能容纳的列数，默认最多三列，随内容区收窄自动降为两列或一列。 */
+    /** 当前容器实际能容纳的列数，按钮宽度始终预留，表单项随内容区收窄自动降列。 */
     const responsiveColumns = computed(() => {
-      if (!layoutWidth.value) return targetColumns.value;
-
-      const availableWidth = actionsBesideFields.value
-        ? layoutWidth.value - INLINE_ACTIONS_WIDTH - LAYOUT_GAP
-        : layoutWidth.value;
-      const columns = Math.floor((availableWidth + LAYOUT_GAP) / (FIELD_MIN_WIDTH + LAYOUT_GAP));
-
-      return Math.min(maxColumns.value, Math.max(1, columns));
+      return calculateSearchColumns(layoutWidth.value, maxColumns.value, props.schema.length);
     });
 
     /** 字段数超过一行时支持折叠，默认只显示第一行 */
@@ -176,13 +154,7 @@ export default defineComponent({
     return () => (
       <div class="bg p-2 search-form">
         <NForm model={props.model} labelPlacement="left" labelWidth="auto">
-          <div
-            ref={layoutRef}
-            class={[
-              "grid w-full items-start gap-2",
-              actionsBesideFields.value ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-1",
-            ]}
-          >
+          <div ref={layoutRef} class="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
             {/* 搜索项网格：默认最多三列，并根据当前内容容器宽度自动降列。 */}
             <div
               class="search-form-fields min-w-0 flex-1 grid items-start gap-2"
@@ -197,13 +169,7 @@ export default defineComponent({
               ))}
             </div>
 
-            {/* 操作按钮空间不足时换到搜索项下方，避免压缩输入控件。 */}
-            <div
-              class={[
-                "flex shrink-0 flex-wrap items-center justify-end gap-2 self-start",
-                actionsBesideFields.value ? "" : "w-full",
-              ]}
-            >
+            <div class="flex shrink-0 flex-nowrap items-center justify-end gap-2 self-start whitespace-nowrap">
               <NButton type="primary" onClick={props.onSearch}>
                 {{
                   icon: () => <NIcon component={Search24Regular} />,

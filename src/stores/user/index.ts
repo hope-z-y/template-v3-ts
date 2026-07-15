@@ -3,6 +3,7 @@ import { fetchRefreshToken } from "@/request/modules/refresh-token";
 import { useMenuStore } from "@/stores/menu";
 import { useMenuTagStore } from "@/stores/menu-tag";
 import { STORE_KEY } from "@/utils";
+import { useLockScreen } from "@/hooks/use-lock-screen";
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 
@@ -121,6 +122,10 @@ export const useUserStore = defineStore(STORE_KEY.UserStore, () => {
     profileLoaded.value = true;
   };
 
+  const updateUserInfo = (nextUserInfo: IProfileUserInfo) => {
+    userInfo.value = nextUserInfo;
+  };
+
   const hasPermission = (permission: string | string[], mode: PermissionMode = "some") => {
     // admin 与 *:*:* 视为超级权限，适合后台模板的管理员账号。
     if (roles.value.includes("admin") || permissions.value.includes("*:*:*")) return true;
@@ -145,6 +150,7 @@ export const useUserStore = defineStore(STORE_KEY.UserStore, () => {
     // 401、刷新失败、退出登录都走这里，确保用户信息、菜单、标签页一起清空。
     useMenuTagStore().reset();
     useMenuStore().reset();
+    useLockScreen().clear();
     clearAuth();
   };
 
@@ -201,6 +207,7 @@ export const useUserStore = defineStore(STORE_KEY.UserStore, () => {
     profileLoaded,
     setTokens,
     setProfile,
+    updateUserInfo,
     hasPermission,
     hasRole,
     clearAuth,

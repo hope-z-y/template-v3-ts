@@ -1,12 +1,16 @@
 import { request } from "@/request";
 import type {
   ICaptchaResponse,
+  IChangeCurrentPasswordParams,
+  IProfileUserInfo,
   IRefreshTokenParams,
   IRefreshTokenResponse,
   ISignInParams,
   ISignInResponse,
   ISignOutParams,
+  IUpdateCurrentProfileParams,
   IUserProfile,
+  IVerifyCurrentPasswordParams,
 } from "../types";
 
 /**
@@ -58,4 +62,19 @@ export const RefreshToken = (data: IRefreshTokenParams) => {
  */
 export const GetCurrentUser = () => {
   return request.get<string, IUserProfile>("/auth/profile");
+};
+
+/** 更新当前用户可自行维护的个人资料。 */
+export const UpdateCurrentProfile = (data: IUpdateCurrentProfileParams) => {
+  return request.patch<string, IProfileUserInfo>("/auth/profile", data);
+};
+
+/** 校验当前用户密码，供锁屏解锁使用。 */
+export const VerifyCurrentPassword = (data: IVerifyCurrentPasswordParams) => {
+  return request.post<string, boolean>("/auth/verify-password", data);
+};
+
+/** 当前用户修改自己的登录密码。 */
+export const ChangeCurrentPassword = (data: IChangeCurrentPasswordParams) => {
+  return request.patch<string, string>("/auth/password", data);
 };

@@ -149,7 +149,7 @@ export const usePage = <TRow, TQuery extends object, TParams = Record<string, un
         return h(SearchForm, {
           model: query as Record<string, unknown>,
           schema: options.search.schema as SearchFieldSchema<Record<string, unknown>>[],
-          columns: options.search.columns ?? 3,
+          columns: options.search.columns ?? 4,
           onSearch: api.search,
           onReset: api.reset,
           // 控件输入直接写回闭包里的查询模型（query 与 pageApi.query 是同一份）
