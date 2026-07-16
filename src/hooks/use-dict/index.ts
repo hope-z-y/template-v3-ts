@@ -1,3 +1,3 @@
-export { useDict } from "./use-dict";
+export { SetAllDictData, useDict } from "./use-dict";
 
 export type { DictApi, DictValue } from "./types";

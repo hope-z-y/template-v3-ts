@@ -1,4 +1,5 @@
 export type * from "./common";
+export type * from "./notice-management";
 export type * from "./user-management";
 export type * from "./dept-management";
 export type * from "./role-management";

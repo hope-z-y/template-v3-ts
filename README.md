@@ -38,7 +38,7 @@ pnpm check
 - 页面源码放在 `src/views/system-management`。
 - 后端菜单 component 字段使用 `system-management/user-management/index` 这类相对路径。
 - 旧拼写 `system-managment` 不做兼容映射，菜单数据发现错误时应直接修正。
-- API 新增代码使用 camelCase 导出，旧 PascalCase 导出仅作为兼容。
+- API 函数导出始终使用 PascalCase 命名，例如 `GetUserList`、`CreateNotice`、`UploadFile`；不允许使用 camelCase API 名称。
 - 后端响应统一为 `{ code, data, message }`，新增类型使用 `ApiResponse<T>`。
 - 后端雪花 ID 与外键一律按 `string` 使用；分页响应统一为 `{ total, rows }`。
 - 系统管理接口使用 `/system/user`、`/system/department`、`/system/role` 等单数资源路径。
@@ -75,7 +75,23 @@ pnpm build
 Nginx 需要把前端路由回退到 `index.html`：
 
 ```nginx
+location /api/ {
+  proxy_pass http://127.0.0.1:8080/;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+location /uploads/ {
+  proxy_pass http://127.0.0.1:8080/uploads/;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+
 location / {
   try_files $uri $uri/ /index.html;
 }
 ```
+
+后端数据库升级后执行 `pnpm typeorm:migration:run`，以创建通知收件箱并写入通知公告、工作台权限。通知发布支持全体、部门、角色和指定用户，未来发布时间由后端定时分发。

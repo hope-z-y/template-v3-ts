@@ -27,14 +27,18 @@ const normalizeDictData = (response: IGetAllDictDataResponse): IGetAllDictDataRe
   );
 };
 
+export const SetAllDictData = (response: IGetAllDictDataResponse) => {
+  dictCache.value = normalizeDictData(response);
+  loaded.value = true;
+};
+
 const requestAllDictData = (): Promise<void> => {
   if (pendingRequest) return pendingRequest;
 
   loading.value = true;
   pendingRequest = GetAllDictData()
     .then((response) => {
-      dictCache.value = normalizeDictData(response);
-      loaded.value = true;
+      SetAllDictData(response);
     })
     .finally(() => {
       pendingRequest = null;

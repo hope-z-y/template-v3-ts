@@ -6,3 +6,4 @@ export * from "./post-management";
 export * from "./dict-management";
 export * from "./config-management";
 export * from "./log-management";
+export * from "./notice-management";

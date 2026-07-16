@@ -16,6 +16,10 @@ export const GetConfigList = (params: IQueryConfigParams) => {
   return request.get<string, IGetConfigListResponse>("/system/parameter", { params });
 };
 
+export const GetGlobalConfig = () => {
+  return request.get<string, Record<string, string>>("/system/parameter/global-config");
+};
+
 /**
  * 按 paramKey 查询参数值
  * @param paramKey 参数键名

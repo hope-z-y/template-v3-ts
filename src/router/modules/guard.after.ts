@@ -1,4 +1,5 @@
 import { useMenuTagStore } from "@/stores/menu-tag";
+import { useGlobalConfig } from "@/hooks";
 import type { NavigationFailure, RouteLocationNormalizedLoaded } from "vue-router";
 
 /**
@@ -16,5 +17,7 @@ export const GuardAfter = (
   if (failure) return true;
 
   useMenuTagStore().addTag(to);
+  const { appName } = useGlobalConfig();
+  document.title = to.meta.title ? `${String(to.meta.title)} - ${appName.value}` : appName.value;
   return true;
 };

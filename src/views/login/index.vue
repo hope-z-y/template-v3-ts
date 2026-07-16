@@ -62,6 +62,7 @@
 import { GetCaptchaCode, GetPublicEncryptKey, SignIn } from "@/api/auth";
 import type { ICaptchaResponse, ISignInParams } from "@/api/types";
 import { SafeCaptcha } from "@/components";
+import { bootstrap } from "@/bootstrap";
 import { useLoading } from "@/hooks";
 import { useMenuStore, useUserStore } from "@/stores";
 import { Encrypt } from "@/utils";
@@ -165,6 +166,7 @@ const signIn = async () => {
     menuStore.reset();
     // Profile 会一次返回用户、权限和菜单，loadProfile 内部会继续完成动态路由注册。
     await userStore.loadProfile(true);
+    await bootstrap();
     message.success("登录成功");
 
     await router.replace(resolveRedirectPath());

@@ -43,6 +43,12 @@ export const staticRoutes: RouteRecordRaw[] = [
         component: () => import("@/views/account/settings/index.vue"),
         meta: { title: "应用设置", icon: "SettingOutlined" },
       },
+      {
+        path: "account/notifications",
+        name: "AccountNotifications",
+        component: () => import("@/views/account/notifications/index.vue"),
+        meta: { title: "通知中心", icon: "NotificationOutlined" },
+      },
     ],
   },
   {

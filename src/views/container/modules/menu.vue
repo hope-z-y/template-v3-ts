@@ -24,13 +24,13 @@ import { storeToRefs } from "pinia";
 import { computed, h } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-const appName = import.meta.env.VITE_APP_NAME;
-const compactAppName = String(appName || "V")
-  .trim()
-  .slice(0, 1)
-  .toUpperCase();
-
-const { collapse } = useGlobalConfig();
+const { collapse, appName } = useGlobalConfig();
+const compactAppName = computed(() =>
+  String(appName.value || "V")
+    .trim()
+    .slice(0, 1)
+    .toUpperCase(),
+);
 const route = useRoute();
 const router = useRouter();
 const menuStore = useMenuStore();

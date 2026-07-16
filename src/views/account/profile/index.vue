@@ -10,9 +10,23 @@
         <NCard title="基础资料" :bordered="false" class="rounded-2xl! shadow-sm">
           <div class="grid gap-6 md:grid-cols-[160px_minmax(0,1fr)]">
             <div class="flex flex-col items-center">
-              <NAvatar round :size="112" :src="profileForm.avatar || UserAvatar" class="shadow-lg" />
+              <NUpload
+                accept="image/png,image/jpeg,image/webp"
+                :show-file-list="false"
+                :custom-request="uploadAvatar"
+                :on-before-upload="validateAvatar"
+                :disabled="avatarUploading"
+              >
+                <button type="button" class="avatar-upload" :disabled="avatarUploading" aria-label="更换头像">
+                  <NAvatar round :size="112" :src="profileForm.avatar || UserAvatar" class="shadow-lg" />
+                  <span class="avatar-upload__mask">
+                    <NSpin v-if="avatarUploading" :size="24" stroke="#fff" />
+                    <template v-else>更换头像</template>
+                  </span>
+                </button>
+              </NUpload>
               <div class="mt-3 max-w-full truncate text-sm font-medium">{{ userInfo?.username }}</div>
-              <div class="mt-1 text-xs text-black/40 dark:text-white/40">头像地址修改后可即时预览</div>
+              <div class="mt-1 text-xs text-black/40 dark:text-white/40">支持 PNG、JPEG、WebP，最大 2 MB</div>
             </div>
 
             <NForm ref="profileFormRef" :model="profileForm" :rules="profileRules" label-placement="top">
@@ -32,12 +46,11 @@
                 <NFormItem label="性别" path="gender">
                   <NSelect v-model:value="profileForm.gender" :options="GenderOptions" />
                 </NFormItem>
-                <NFormItem label="头像 URL" path="avatar">
-                  <NInput v-model:value="profileForm.avatar" placeholder="https://..." clearable />
-                </NFormItem>
               </div>
               <div class="flex justify-end">
-                <NButton type="primary" :loading="profileSubmitting" @click="saveProfile">保存资料</NButton>
+                <NButton type="primary" :loading="profileSubmitting" :disabled="avatarUploading" @click="saveProfile">
+                  保存资料
+                </NButton>
               </div>
             </NForm>
           </div>
@@ -100,6 +113,7 @@
 <script setup lang="ts">
 import UserAvatar from "@/assets/images/Vue.png";
 import { ChangeCurrentPassword, GetPublicEncryptKey, UpdateCurrentProfile } from "@/api/auth";
+import { UploadFile } from "@/api/common";
 import type { IProfileUserInfo } from "@/api/types";
 import { useUserStore } from "@/stores";
 import { Encrypt } from "@/utils";
@@ -117,10 +131,14 @@ import {
   NInput,
   NScrollbar,
   NSelect,
+  NSpin,
   NTag,
+  NUpload,
   useMessage,
   type FormInst,
   type FormRules,
+  type UploadCustomRequestOptions,
+  type UploadFileInfo,
 } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { reactive, ref, watch } from "vue";
@@ -131,6 +149,7 @@ const { userInfo } = storeToRefs(userStore);
 const profileFormRef = ref<FormInst | null>(null);
 const passwordFormRef = ref<FormInst | null>(null);
 const profileSubmitting = ref(false);
+const avatarUploading = ref(false);
 const passwordSubmitting = ref(false);
 
 const profileForm = reactive({
@@ -183,6 +202,41 @@ const passwordRules: FormRules = {
 
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleString("zh-CN") : "-");
 
+const validateAvatar = ({ file }: { file: UploadFileInfo }) => {
+  const rawFile = file.file;
+  if (!rawFile) return false;
+
+  const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+  if (!allowedTypes.includes(rawFile.type)) {
+    message.error("仅支持 PNG、JPEG 或 WebP 图片");
+    return false;
+  }
+  if (rawFile.size > 2 * 1024 * 1024) {
+    message.error("头像图片不能超过 2 MB");
+    return false;
+  }
+
+  return true;
+};
+
+const uploadAvatar = async ({ file, onFinish, onError }: UploadCustomRequestOptions) => {
+  if (!file.file) {
+    onError();
+    return;
+  }
+
+  avatarUploading.value = true;
+  try {
+    profileForm.avatar = await UploadFile(file.file);
+    message.success("头像上传成功，请保存资料");
+    onFinish();
+  } catch {
+    onError();
+  } finally {
+    avatarUploading.value = false;
+  }
+};
+
 const saveProfile = async () => {
   try {
     await profileFormRef.value?.validate();
@@ -224,3 +278,42 @@ const changePassword = async () => {
   }
 };
 </script>
+
+<style scoped>
+.avatar-upload {
+  position: relative;
+  display: block;
+  width: 112px;
+  height: 112px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.avatar-upload:focus-visible {
+  outline: 3px solid var(--n-color-target);
+  outline-offset: 3px;
+}
+
+.avatar-upload__mask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 58%);
+  color: #fff;
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.avatar-upload:hover .avatar-upload__mask,
+.avatar-upload:focus-visible .avatar-upload__mask,
+.avatar-upload:disabled .avatar-upload__mask {
+  opacity: 1;
+}
+</style>

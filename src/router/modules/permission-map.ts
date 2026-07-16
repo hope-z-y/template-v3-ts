@@ -12,6 +12,7 @@ const ROUTE_PERMISSION_MAP = new Map<string, string>([
   ["/system-management/post-management", "system:post:list"],
   ["/system-management/config-management", "system:parameter:list"],
   ["/system-management/dict-management", "system:dict-type:list"],
+  ["/system-management/notice-management", "system:notice:list"],
   ["/monitor/login-log", "system:login-log:list"],
   ["/monitor/operation-log", "system:operation-log:list"],
 ]);

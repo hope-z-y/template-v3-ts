@@ -17,13 +17,12 @@ import "@/styles/tailwind.css";
 import App from "./App.vue";
 
 const setup = async () => {
-  await bootstrap();
-
   const pinia = createPinia();
   pinia.use(piniaPluginPersistedstate);
 
   const app = createApp(App);
   app.use(pinia);
+  await bootstrap();
   app.use(router);
   setupDirectives(app);
   app.mount("#app");

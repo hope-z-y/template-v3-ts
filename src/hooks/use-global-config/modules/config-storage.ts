@@ -4,7 +4,7 @@ export const APP_CONFIG_STORAGE_KEY = "template-v3-ts:config";
 
 export const defaultGlobalConfig: IGlobalConfig = {
   version: 2,
-  appName: "Vue3-Template",
+  appName: import.meta.env.VITE_APP_NAME || "Vue3-Template",
   theme: "dark",
   collapse: false,
   themeColor: "green",

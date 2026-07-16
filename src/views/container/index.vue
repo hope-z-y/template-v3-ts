@@ -19,6 +19,7 @@
     <template #user>
       <div class="inline-flex gap-4 items-center shrink-0">
         <Search :items="menuSearchItems" />
+        <NotificationBell />
         <NTooltip trigger="hover">
           <template #trigger>
             <NIcon
@@ -90,6 +91,7 @@ import LockScreen from "./modules/lock-screen.vue";
 import RouteView from "./modules/route-view.vue";
 import Search from "./modules/search.vue";
 import UserAction from "./modules/user-action.vue";
+import NotificationBell from "./modules/notification-bell.vue";
 
 interface MenuSearchItem {
   id: string;

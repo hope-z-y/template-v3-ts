@@ -4,7 +4,7 @@ import { BuildMenuIconMap, EnsureHomeMenuOption, MenusToOptions, STORE_KEY, type
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
-const STATIC_ACCOUNT_PATHS = ["/account/profile", "/account/settings"];
+const STATIC_ACCOUNT_PATHS = ["/account/profile", "/account/settings", "/account/notifications"];
 
 /** 菜单与动态路由状态：数据来自 /auth/profile.menus（已按当前用户过滤）。 */
 export const useMenuStore = defineStore(STORE_KEY.MenuStore, () => {
